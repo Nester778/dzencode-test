@@ -312,7 +312,7 @@ const loadSampleData = () => {
     }
   ]
 }
-ы
+
 const selectOrder = (order: Order) => {
   selectedOrder.value = order
 }

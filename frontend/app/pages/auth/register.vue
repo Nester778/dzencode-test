@@ -1,24 +1,41 @@
 <template>
-  <div class="login-page min-vh-100 d-flex align-items-center justify-content-center">
+  <div class="register-page min-vh-100 d-flex align-items-center justify-content-center">
     <div class="container">
       <div class="row justify-content-center">
-        <div class="col-md-5 col-lg-4">
+        <div class="col-md-6 col-lg-5">
           <div class="text-center mb-5">
             <div class="logo mb-3">
               <Package :size="48" class="text-white" />
             </div>
             <h1 class="text-white fw-light">INVENTORY</h1>
-            <p class="text-white-50">Система управления заказами и продуктами</p>
+            <p class="text-white-50">Создайте новый аккаунт</p>
           </div>
 
           <div class="auth-card card border-0 shadow-lg">
             <div class="card-body p-4">
               <div class="text-center mb-4">
-                <h5 class="card-title fw-semibold text-dark mb-2">Вход в систему</h5>
-                <p class="text-muted small">Введите ваши учетные данные</p>
+                <h5 class="card-title fw-semibold text-dark mb-2">Регистрация</h5>
+                <p class="text-muted small">Заполните информацию для создания аккаунта</p>
               </div>
 
-              <form @submit.prevent="handleLogin">
+              <form @submit.prevent="handleRegister">
+                <div class="mb-3">
+                  <label for="name" class="form-label small text-muted fw-semibold">Полное имя</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0">
+                      <User :size="16" class="text-muted" />
+                    </span>
+                    <input
+                        v-model="form.name"
+                        type="text"
+                        class="form-control border-start-0"
+                        id="name"
+                        placeholder="Иван Иванов"
+                        required
+                    >
+                  </div>
+                </div>
+>
                 <div class="mb-3">
                   <label for="email" class="form-label small text-muted fw-semibold">Email</label>
                   <div class="input-group">
@@ -36,7 +53,7 @@
                   </div>
                 </div>
 
-                <div class="mb-4">
+                <div class="mb-3">
                   <label for="password" class="form-label small text-muted fw-semibold">Пароль</label>
                   <div class="input-group">
                     <span class="input-group-text bg-light border-end-0">
@@ -47,36 +64,60 @@
                         type="password"
                         class="form-control border-start-0"
                         id="password"
-                        placeholder="Введите ваш пароль"
+                        placeholder="Минимум 6 символов"
+                        required
+                        minlength="6"
+                    >
+                  </div>
+                  <div class="form-text small text-muted">
+                    Пароль должен содержать минимум 6 символов
+                  </div>
+                </div>
+
+                <div class="mb-4">
+                  <label for="confirmPassword" class="form-label small text-muted fw-semibold">Подтверждение пароля</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0">
+                      <Lock :size="16" class="text-muted" />
+                    </span>
+                    <input
+                        v-model="form.confirmPassword"
+                        type="password"
+                        class="form-control border-start-0"
+                        id="confirmPassword"
+                        placeholder="Повторите ваш пароль"
                         required
                     >
+                  </div>
+                  <div v-if="form.password !== form.confirmPassword && form.confirmPassword" class="form-text small text-danger">
+                    Пароли не совпадают
                   </div>
                 </div>
 
                 <button
                     type="submit"
                     class="btn btn-success w-100 py-2 fw-semibold"
-                    :disabled="loading"
+                    :disabled="loading || form.password !== form.confirmPassword"
                 >
                   <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                  <span v-else><LogIn :size="16" class="me-2" /></span>
-                  Войти в систему
+                  <span v-else><UserPlus :size="16" class="me-2" /></span>
+                  Создать аккаунт
                 </button>
               </form>
 
               <div class="text-center mt-4 pt-3 border-top">
-                <p class="text-muted small mb-2">Еще нет аккаунта?</p>
-                <NuxtLink to="/auth/register" class="btn btn-outline-primary btn-sm">
-                  Создать аккаунт
+                <p class="text-muted small mb-2">Уже есть аккаунт?</p>
+                <NuxtLink to="/auth/login" class="btn btn-outline-secondary btn-sm">
+                  <LogIn :size="14" class="me-1" />
+                  Войти в систему
                 </NuxtLink>
               </div>
 
               <div class="text-center mt-4">
-                <div class="test-credentials card border-warning">
+                <div class="info-card card border-info">
                   <div class="card-body py-2">
-                    <small class="text-warning">
-                      <strong>Тестовые данные:</strong><br>
-                      test@example.com / password123
+                    <small class="text-info">
+                      <strong>После регистрации</strong> вы получите доступ ко всем функциям системы управления заказами и продуктами.
                     </small>
                   </div>
                 </div>
@@ -90,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { Package, Mail, Lock, LogIn } from 'lucide-vue-next'
+import { Package, Mail, Lock, User, UserPlus, LogIn } from 'lucide-vue-next'
 
 definePageMeta({
   layout: 'auth'
@@ -99,29 +140,37 @@ definePageMeta({
 const router = useRouter()
 
 const form = ref({
-  email: 'test@example.com',
-  password: 'password123'
+  name: '',
+  email: '',
+  password: '',
+  confirmPassword: ''
 })
 
 const loading = ref(false)
 
-const handleLogin = async () => {
+const handleRegister = async () => {
+  if (form.value.password !== form.value.confirmPassword) {
+    return
+  }
+
   loading.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    console.log('Registration attempt:', form.value)
+
+    await new Promise(resolve => setTimeout(resolve, 2000))
 
     localStorage.setItem('auth_token', 'fake-jwt-token')
     localStorage.setItem('user', JSON.stringify({
-      id: '1',
-      name: 'Test User',
+      id: '2',
+      name: form.value.name,
       email: form.value.email
     }))
 
-    console.log('Login successful!')
+    console.log('Registration successful!')
 
     router.push('/orders')
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('Registration error:', error)
   } finally {
     loading.value = false
   }
@@ -129,7 +178,7 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
-.login-page {
+.register-page {
   padding: 2rem 0;
 }
 
@@ -182,15 +231,20 @@ const handleLogin = async () => {
   transform: translateY(-1px);
 }
 
-.btn-outline-primary {
+.btn-success:disabled {
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
+.btn-outline-secondary {
   border-radius: 8px;
   border-width: 2px;
   font-weight: 500;
 }
 
-.test-credentials {
-  background: rgba(255, 193, 7, 0.1);
-  border: 1px solid rgba(255, 193, 7, 0.3);
+.info-card {
+  background: rgba(23, 162, 184, 0.1);
+  border: 1px solid rgba(23, 162, 184, 0.3);
 }
 
 .auth-card {
@@ -209,7 +263,7 @@ const handleLogin = async () => {
 }
 
 @media (max-width: 768px) {
-  .login-page {
+  .register-page {
     padding: 1rem;
   }
 
