@@ -9,11 +9,19 @@ export const getProducts = async (req, res) => {
             filter.type = type;
         }
 
+        // Получаем продукты только из заказов текущего пользователя
         const products = await Product.find(filter)
-            .populate('order', 'title')
+            .populate({
+                path: 'order',
+                select: 'title',
+                match: { user: req.user.id } // Фильтруем по пользователю
+            })
             .sort({ date: -1 });
 
-        res.json(products);
+        // Фильтруем продукты, у которых order не null (принадлежат пользователю)
+        const userProducts = products.filter(product => product.order !== null);
+
+        res.json(userProducts);
     } catch (error) {
         console.error('Get products error:', error);
         res.status(500).json({ message: 'Server error' });
@@ -22,9 +30,14 @@ export const getProducts = async (req, res) => {
 
 export const getProductById = async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id).populate('order', 'title');
+        const product = await Product.findById(req.params.id)
+            .populate({
+                path: 'order',
+                select: 'title',
+                match: { user: req.user.id }
+            });
 
-        if (!product) {
+        if (!product || !product.order) {
             return res.status(404).json({ message: 'Product not found' });
         }
 
@@ -37,20 +50,76 @@ export const getProductById = async (req, res) => {
 
 export const createProduct = async (req, res) => {
     try {
-        const productData = {
-            ...req.body,
-            order: req.body.orderId // assuming we pass orderId in request
-        };
+        const { orderId, ...productData } = req.body;
 
-        const product = new Product(productData);
+        // Проверяем, что заказ принадлежит пользователю
+        const order = await Order.findOne({
+            _id: orderId,
+            user: req.user.id
+        });
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found or access denied' });
+        }
+
+        const product = new Product({
+            ...productData,
+            order: orderId
+        });
+
         await product.save();
-
-        // Populate order data for response
         await product.populate('order', 'title');
 
         res.status(201).json(product);
     } catch (error) {
         console.error('Create product error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+export const updateProduct = async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id)
+            .populate({
+                path: 'order',
+                select: 'user',
+                match: { user: req.user.id }
+            });
+
+        if (!product || !product.order) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+
+        const updatedProduct = await Product.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        ).populate('order', 'title');
+
+        res.json(updatedProduct);
+    } catch (error) {
+        console.error('Update product error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+export const deleteProduct = async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id)
+            .populate({
+                path: 'order',
+                select: 'user',
+                match: { user: req.user.id }
+            });
+
+        if (!product || !product.order) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+
+        await Product.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Product deleted successfully' });
+    } catch (error) {
+        console.error('Delete product error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

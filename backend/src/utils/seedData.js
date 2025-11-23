@@ -3,6 +3,14 @@ import User from '../models/User.js';
 
 export const seedInitialData = async (userId) => {
     try {
+        // Удаляем старые данные пользователя перед созданием новых
+        await Order.deleteMany({ user: userId });
+        await Product.deleteMany({
+            order: {
+                $in: await Order.find({ user: userId }).distinct('_id')
+            }
+        });
+
         // Create sample orders
         const order1 = new Order({
             title: 'Order 1',
@@ -106,7 +114,7 @@ export const seedInitialData = async (userId) => {
         ];
 
         await Product.insertMany(products);
-        console.log('Sample data seeded successfully');
+        console.log('Sample data seeded successfully for user:', userId);
     } catch (error) {
         console.error('Error seeding data:', error);
     }

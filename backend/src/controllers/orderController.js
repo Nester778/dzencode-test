@@ -2,7 +2,8 @@ import { Order, Product } from '../models/Order.js';
 
 export const getOrders = async (req, res) => {
     try {
-        const orders = await Order.find({})
+        // Получаем заказы только текущего пользователя
+        const orders = await Order.find({ user: req.user.id })
             .populate('products')
             .sort({ date: -1 });
         res.json(orders);
@@ -16,7 +17,7 @@ export const getOrderById = async (req, res) => {
     try {
         const order = await Order.findOne({
             _id: req.params.id,
-            user: req.user.id
+            user: req.user.id // Проверяем, что заказ принадлежит пользователю
         }).populate('products');
 
         if (!order) {
@@ -38,7 +39,7 @@ export const createOrder = async (req, res) => {
             title,
             description,
             date: date || new Date(),
-            user: req.user.id
+            user: req.user.id // Привязываем к текущему пользователю
         });
 
         await order.save();
@@ -49,11 +50,39 @@ export const createOrder = async (req, res) => {
     }
 };
 
+export const updateOrder = async (req, res) => {
+    try {
+        const { title, description, date } = req.body;
+
+        const order = await Order.findOneAndUpdate(
+            {
+                _id: req.params.id,
+                user: req.user.id // Обновляем только свои заказы
+            },
+            {
+                title,
+                description,
+                date
+            },
+            { new: true }
+        );
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        res.json(order);
+    } catch (error) {
+        console.error('Update order error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 export const deleteOrder = async (req, res) => {
     try {
         const order = await Order.findOne({
             _id: req.params.id,
-            user: req.user.id
+            user: req.user.id // Удаляем только свои заказы
         });
 
         if (!order) {
