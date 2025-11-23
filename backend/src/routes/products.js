@@ -10,7 +10,6 @@ import { auth } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// All routes are protected
 router.use(auth);
 
 router.get('/', getProducts);

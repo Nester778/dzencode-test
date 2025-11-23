@@ -63,7 +63,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   select: [order: any]
-  edit: [order: any]  // Добавляем emit для редактирования
+  edit: [order: any]
   delete: [order: any]
 }>()
 
@@ -102,7 +102,7 @@ const handleSelect = () => {
 
 const handleEdit = () => {
   if (!props.disabled) {
-    emit('edit', props.order)  // Эмитим событие редактирования
+    emit('edit', props.order)
   }
 }
 
@@ -112,7 +112,6 @@ const handleDelete = () => {
 </script>
 
 <style scoped>
-/* Стили остаются без изменений */
 .order-card {
   display: flex;
   justify-content: space-between;
@@ -124,6 +123,7 @@ const handleDelete = () => {
   cursor: pointer;
   transition: all 0.2s ease;
   gap: 12px;
+  position: relative;
 }
 
 .order-card:hover {
@@ -131,10 +131,22 @@ const handleDelete = () => {
   border-color: #d1d9e6;
 }
 
+/* Внутренний зеленый бордер для активной карточки */
 .order-card.selected {
-  border-color: #28a745;
-  background: #f1fff3;
-  box-shadow: 0 0 0 1px #28a745;
+  background: #f8fff9;
+  position: relative;
+}
+
+.order-card.selected::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  border: 2px solid #28a745;
+  border-radius: 6px;
+  pointer-events: none;
 }
 
 .main-content {
@@ -182,6 +194,13 @@ const handleDelete = () => {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.order-card:hover .actions,
+.order-card.selected .actions {
+  opacity: 1;
 }
 
 .action-btn {
@@ -190,7 +209,6 @@ const handleDelete = () => {
   padding: 6px;
   border-radius: 4px;
   cursor: pointer;
-  opacity: 0.7;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -198,8 +216,8 @@ const handleDelete = () => {
 }
 
 .action-btn:hover {
-  opacity: 1;
   background: #f1f5f9;
+  transform: scale(1.1);
 }
 
 .edit-btn {
@@ -208,6 +226,7 @@ const handleDelete = () => {
 
 .edit-btn:hover {
   color: #3b82f6;
+  background: #eff6ff;
 }
 
 .delete-btn {
@@ -216,11 +235,13 @@ const handleDelete = () => {
 
 .delete-btn:hover {
   color: #ef4444;
+  background: #fef2f2;
 }
 
 .action-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+  transform: none;
 }
 
 @media (max-width: 768px) {
@@ -231,11 +252,20 @@ const handleDelete = () => {
 
   .actions {
     align-self: flex-end;
+    opacity: 1;
   }
 
   .order-row {
     gap: 16px;
     flex-wrap: wrap;
+  }
+
+  .order-card.selected::before {
+    top: 1px;
+    left: 1px;
+    right: 1px;
+    bottom: 1px;
+    border-width: 2px;
   }
 }
 </style>

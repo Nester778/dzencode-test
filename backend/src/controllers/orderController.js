@@ -16,7 +16,7 @@ export const getOrderById = async (req, res) => {
     try {
         const order = await Order.findOne({
             _id: req.params.id,
-            user: req.user.id // Проверяем, что заказ принадлежит пользователю
+            user: req.user.id
         }).populate('products');
 
         if (!order) {
@@ -56,7 +56,7 @@ export const updateOrder = async (req, res) => {
         const order = await Order.findOneAndUpdate(
             {
                 _id: req.params.id,
-                user: req.user.id // Обновляем только свои заказы
+                user: req.user.id
             },
             {
                 title,
@@ -81,14 +81,13 @@ export const deleteOrder = async (req, res) => {
     try {
         const order = await Order.findOne({
             _id: req.params.id,
-            user: req.user.id // Удаляем только свои заказы
+            user: req.user.id
         });
 
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
         }
 
-        // Delete associated products
         await Product.deleteMany({ order: req.params.id });
         await Order.findByIdAndDelete(req.params.id);
 

@@ -116,14 +116,12 @@ const orderSchema = new mongoose.Schema({
     toObject: { virtuals: true }
 });
 
-// Virtual for products
 orderSchema.virtual('products', {
     ref: 'Product',
     localField: '_id',
     foreignField: 'order'
 });
 
-// Calculate total price
 orderSchema.methods.calculateTotal = function() {
     if (!this.products) return { USD: 0, UAH: 0 };
 

@@ -9,7 +9,6 @@ export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Find user
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({
@@ -18,7 +17,6 @@ export const login = async (req, res) => {
             });
         }
 
-        // Check password
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
             return res.status(400).json({
@@ -55,7 +53,6 @@ export const register = async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
-        // Check if user exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({
@@ -64,11 +61,9 @@ export const register = async (req, res) => {
             });
         }
 
-        // Create user
         const user = new User({ name, email, password });
         await user.save();
 
-        // Generate token
         const token = generateToken(user._id);
 
         const response = {

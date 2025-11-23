@@ -123,7 +123,7 @@ export const auth = {
                 const { $api } = useNuxtApp()
                 const response = await $api.get<User>('/auth/me')
 
-                const user = response.data
+                const user = response
                 commit('SET_USER', user)
 
                 return user

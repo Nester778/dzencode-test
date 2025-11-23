@@ -2,10 +2,12 @@
   <div class="order-details-panel card h-100">
     <div class="card-header bg-white border-bottom">
       <div class="d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">{{ order.title }}</h5>
+        <h5 class="mb-0 order-title" :title="order.title">
+          {{ truncatedTitle }}
+        </h5>
         <button
             class="btn btn-link text-muted p-0"
-            @click="$emit('close')"
+            @click="handleClose"
             :disabled="loading"
         >
           <X :size="20" />
@@ -45,13 +47,15 @@
         </div>
 
         <div v-else class="products-list">
-          <ProductCard
-              v-for="product in order.products"
-              :key="product._id"
-              :product="product"
-              :disabled="loading"
-              @delete="removeProduct"
-          />
+          <transition-group name="fade-list" tag="div">
+            <ProductCard
+                v-for="product in order.products"
+                :key="product._id"
+                :product="product"
+                :disabled="loading"
+                @delete="removeProduct"
+            />
+          </transition-group>
         </div>
       </div>
 
@@ -85,6 +89,7 @@ import { X, Package, Plus } from 'lucide-vue-next'
 import { useOrdersStore } from '~/composables/useStore'
 import ProductCard from '~/components/ProductCard.vue'
 import AddProductsModal from '~/components/modals/AddProductsModal.vue'
+import { computed } from 'vue'
 
 interface Props {
   order: any
@@ -104,6 +109,18 @@ const ordersStore = useOrdersStore()
 
 const showAddProductsModal = ref(false)
 const isLoadingAddProducts = ref(false)
+
+// Ограничение длины названия заказа
+const truncatedTitle = computed(() => {
+  const title = props.order.title || ''
+  const maxLength = 50 // Максимальная длина названия
+
+  if (title.length <= maxLength) {
+    return title
+  }
+
+  return title.substring(0, maxLength) + '...'
+})
 
 const calculateTotal = (order: any) => {
   if (!order.products || order.products.length === 0) return '0 ₴ 0 $'
@@ -127,6 +144,10 @@ const openAddProductsModal = () => {
 
 const closeAddProductsModal = () => {
   showAddProductsModal.value = false
+}
+
+const handleClose = () => {
+  emit('close')
 }
 
 const removeProduct = async (productId: string) => {
@@ -175,11 +196,36 @@ const handleAddProducts = async (products: any[]) => {
   height: calc(100vh - 200px);
   display: flex;
   flex-direction: column;
+  animation: panel-appear 0.3s ease-out;
+}
+
+@keyframes panel-appear {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .order-details-panel .card-body {
   overflow-y: auto;
   flex: 1;
+}
+
+/* Стили для ограниченного названия заказа */
+.order-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  max-width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 .section-title {
@@ -202,10 +248,56 @@ const handleAddProducts = async (products: any[]) => {
   border-color: #28a745;
 }
 
+/* Анимации для списка продуктов */
+.fade-list-enter-active,
+.fade-list-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-list-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.fade-list-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.fade-list-leave-active {
+  position: absolute;
+}
+
+.fade-list-move {
+  transition: transform 0.3s ease;
+}
+
 @media (max-width: 991.98px) {
   .order-details-panel {
     margin-top: 2rem;
     height: auto;
+  }
+
+  .order-title {
+    max-width: 200px;
+  }
+
+  @keyframes panel-appear {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .order-title {
+    max-width: 150px;
+    font-size: 1rem;
   }
 }
 </style>

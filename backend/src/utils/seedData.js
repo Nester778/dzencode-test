@@ -1,6 +1,5 @@
 export const seedInitialData = async (userId) => {
     try {
-        // Удаляем старые данные пользователя перед созданием новых
         await Order.deleteMany({ user: userId });
         await Product.deleteMany({ order: { $in: (await Order.find({ user: userId })).map(o => o._id) } });
 

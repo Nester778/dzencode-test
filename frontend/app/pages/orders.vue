@@ -42,19 +42,20 @@
           </div>
         </div>
 
-        <div v-if="selectedOrder" class="col-12 col-lg-7">
-          <OrderProductsPanel
-              :order="selectedOrder"
-              :loading="isLoading.value"
-              :isLoadingProducts="isLoadingProducts"
-              @close="selectedOrder = null"
-              @update:order="handleOrderUpdate"
-          />
-        </div>
+        <transition name="slide-fade">
+          <div v-if="selectedOrder" class="col-12 col-lg-7">
+            <OrderProductsPanel
+                :order="selectedOrder"
+                :loading="isLoading.value"
+                :isLoadingProducts="isLoadingProducts"
+                @close="selectedOrder = null"
+                @update:order="handleOrderUpdate"
+            />
+          </div>
+        </transition>
       </div>
     </div>
 
-    <!-- Модальные окна -->
     <DeleteOrderModal
         :show="showDeleteModal"
         :order="orderToDelete"
@@ -205,38 +206,12 @@ const createOrder = async (orderData: any) => {
   }
 }
 
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  })
-}
-
-const calculateTotal = (order: any) => {
-  if (!order.products || order.products.length === 0) return '0 ₴ 0 $'
-
-  const totalUAH = order.products.reduce((sum: number, product: any) => {
-    const uahPrice = product.price.find((p: any) => p.symbol === 'UAH')
-    return sum + (uahPrice?.value || 0)
-  }, 0)
-
-  const totalUSD = order.products.reduce((sum: number, product: any) => {
-    const usdPrice = product.price.find((p: any) => p.symbol === 'USD')
-    return sum + (usdPrice?.value || 0)
-  }, 0)
-
-  return `${totalUAH.toLocaleString('ru-RU')} ₴ ${totalUSD.toLocaleString('ru-RU')} $`
-}
-
 onUnmounted(() => {
   ordersStore.clearError()
 })
 </script>
 
 <style scoped>
-/* Стили остаются такими же */
 .orders-page {
   padding: 0;
 }
@@ -265,66 +240,14 @@ onUnmounted(() => {
   overflow-y: auto;
 }
 
-.order-details-panel {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  height: calc(100vh - 200px);
-  display: flex;
-  flex-direction: column;
-}
-
 .order-details-panel .card-body {
   overflow-y: auto;
   flex: 1;
 }
 
-.section-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.products-list {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.product-item {
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-
-.product-item:hover {
-  border-color: #28a745;
-}
-
 .product-photo .no-photo {
   width: 50px;
   height: 50px;
-}
-
-.product-title {
-  font-size: 0.9rem;
-  margin-bottom: 2px;
-}
-
-.product-type {
-  font-size: 0.8rem;
-}
-
-.guarantee-date {
-  color: #6c757d;
-}
-
-.price-item {
-  font-size: 0.85rem;
-  margin-bottom: 2px;
-}
-
-.price-item.default-price {
-  font-weight: 600;
-  color: #28a745;
 }
 
 .empty-state, .empty-products {
@@ -334,11 +257,6 @@ onUnmounted(() => {
 @media (max-width: 991.98px) {
   .orders-list {
     max-height: none;
-  }
-
-  .order-details-panel {
-    margin-top: 2rem;
-    height: auto;
   }
 }
 
@@ -351,7 +269,15 @@ onUnmounted(() => {
   height: 1rem;
 }
 
-.empty-products {
-  padding: 2rem;
+@media (max-width: 991.98px) {
+  .slide-fade-enter-from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  .slide-fade-leave-to {
+    transform: translateY(20px);
+    opacity: 0;
+  }
 }
 </style>
