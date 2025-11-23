@@ -72,11 +72,8 @@ export const orders = {
 
             try {
                 const { $api } = useNuxtApp()
-                console.log('Начало загрузки заказов...')
                 const orders = await $api.get<Order[]>('/orders')
-                console.log('Заказы получены:', orders)
                 commit('SET_ORDERS', orders)
-                console.log('Стейт обновлен')
                 return orders
             } catch (error: any) {
                 const message = error.response?.data?.message || 'Ошибка при загрузке заказов'
@@ -84,7 +81,6 @@ export const orders = {
                 commit('SET_ERROR', message)
                 throw error
             } finally {
-                console.log('Завершение загрузки, установка isLoading: false')
                 commit('SET_LOADING', false)
             }
         },

@@ -275,7 +275,6 @@
         </div>
       </div>
     </div>
-    {{console.log(orders)}}
   </div>
 </template>
 
@@ -302,15 +301,12 @@ const newOrder = ref({
 })
 
 onMounted(async () => {
-  console.log('Компонент mounted, загружаем заказы...')
   await fetchOrders()
 })
 
 const fetchOrders = async () => {
   try {
-    console.log('Начинаем загрузку заказов...')
     await ordersStore.fetchOrders()
-    console.log('Заказы загружены, количество:', orders.value.length)
   } catch (err) {
     console.error('Ошибка при загрузке заказов:', err)
   }
@@ -384,8 +380,6 @@ const createOrder = async () => {
 
     await ordersStore.createOrder(orderData)
     closeCreateModal()
-
-    console.log('Заказ успешно создан!')
   } catch (err) {
     console.error('Ошибка при создании заказа:', err)
   }

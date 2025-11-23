@@ -1,5 +1,7 @@
+// store/modules/auth.ts
 import type { User, LoginData, RegisterData, AuthResponse } from '~/types'
 import { safeLocalStorage } from '~/utils/storage'
+import type { AuthActionContext } from '~/types/vuex'
 
 interface AuthState {
     user: User | null
@@ -52,7 +54,7 @@ export const auth = {
     },
 
     actions: {
-        async login({ commit, dispatch }: any, credentials: LoginData) {
+        async login({ commit, dispatch }: AuthActionContext, credentials: LoginData) {
             commit('SET_LOADING', true)
             commit('SET_ERROR', null)
 
@@ -60,18 +62,20 @@ export const auth = {
                 const { $api } = useNuxtApp()
                 const response = await $api.post<AuthResponse>('/auth/login', credentials)
 
-                commit('SET_TOKEN', response.token)
-                commit('SET_USER', response.user)
+                const { token, user } = response.data
+
+                commit('SET_TOKEN', token)
+                commit('SET_USER', user)
 
                 if ($api.defaults.headers.common) {
-                    $api.defaults.headers.common['Authorization'] = `Bearer ${response.token}`
+                    $api.defaults.headers.common['Authorization'] = `Bearer ${token}`
                 }
 
                 if (process.client) {
                     navigateTo('/orders')
                 }
 
-                return response
+                return response.data
             } catch (error: any) {
                 const message = error.response?.data?.message || 'Ошибка при входе в систему'
                 commit('SET_ERROR', message)
@@ -81,7 +85,7 @@ export const auth = {
             }
         },
 
-        async register({ commit }: any, userData: RegisterData) {
+        async register({ commit }: AuthActionContext, userData: RegisterData) {
             commit('SET_LOADING', true)
             commit('SET_ERROR', null)
 
@@ -89,18 +93,20 @@ export const auth = {
                 const { $api } = useNuxtApp()
                 const response = await $api.post<AuthResponse>('/auth/register', userData)
 
-                commit('SET_TOKEN', response.token)
-                commit('SET_USER', response.user)
+                const { token, user } = response.data
+
+                commit('SET_TOKEN', token)
+                commit('SET_USER', user)
 
                 if ($api.defaults.headers.common) {
-                    $api.defaults.headers.common['Authorization'] = `Bearer ${response.token}`
+                    $api.defaults.headers.common['Authorization'] = `Bearer ${token}`
                 }
 
                 if (process.client) {
                     navigateTo('/orders')
                 }
 
-                return response
+                return response.data
             } catch (error: any) {
                 const message = error.response?.data?.message || 'Ошибка при регистрации'
                 commit('SET_ERROR', message)
@@ -110,20 +116,24 @@ export const auth = {
             }
         },
 
-        async fetchUser({ commit, state }: any) {
+        async fetchUser({ commit, state, dispatch }: AuthActionContext) {
             if (!state.token) return
 
             try {
                 const { $api } = useNuxtApp()
-                const user = await $api.get<User>('/auth/me')
+                const response = await $api.get<User>('/auth/me')
+
+                const user = response.data
                 commit('SET_USER', user)
+
+                return user
             } catch (error) {
                 console.error('Fetch user error:', error)
                 dispatch('logout')
             }
         },
 
-        logout({ commit }: any) {
+        logout({ commit }: AuthActionContext) {
             commit('CLEAR_AUTH')
 
             const { $api } = useNuxtApp()
@@ -136,11 +146,11 @@ export const auth = {
             }
         },
 
-        clearError({ commit }: any) {
+        clearError({ commit }: AuthActionContext) {
             commit('SET_ERROR', null)
         },
 
-        initialize({ dispatch }: any) {
+        initialize({ dispatch }: AuthActionContext) {
             const token = safeLocalStorage.getItem('auth_token')
             if (token) {
                 dispatch('fetchUser')
