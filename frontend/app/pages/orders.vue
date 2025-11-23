@@ -17,7 +17,7 @@
 
     <div v-else class="orders-container">
       <div class="row g-3">
-        <div class="col-12" :class="{ 'col-lg-5': selectedOrder }">
+        <div class="orders-column" :class="{ 'with-panel': selectedOrder }">
           <div class="orders-list">
             <div v-if="orders.value.length === 0" class="empty-state text-center py-5">
               <Package :size="64" class="text-muted mb-3" />
@@ -42,8 +42,8 @@
           </div>
         </div>
 
-        <transition name="slide-fade">
-          <div v-if="selectedOrder" class="col-12 col-lg-7">
+        <transition name="panel-slide" mode="out-in">
+          <div v-if="selectedOrder" class="panel-column">
             <OrderProductsPanel
                 :order="selectedOrder"
                 :loading="isLoading.value"
@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { Plus, X, Package, Edit } from 'lucide-vue-next'
+import { Plus, Package } from 'lucide-vue-next'
 import { useOrdersStore } from '~/composables/useStore'
 import OrderCard from '~/components/OrderCard.vue'
 import DeleteOrderModal from '~/components/modals/DeleteOrderModal.vue'
@@ -180,7 +180,12 @@ const handleOrderUpdate = (updatedOrder: any) => {
 const handleUpdateOrder = async (orderData: any) => {
   isLoadingEdit.value = true
   try {
-    await ordersStore.updateOrder(orderData)
+    const updatedOrder = await ordersStore.updateOrder(orderData)
+
+    if (selectedOrder.value?._id === orderData._id) {
+      selectedOrder.value = { ...selectedOrder.value, ...updatedOrder }
+    }
+
     closeEditModal()
   } catch (err) {
     console.error('Ошибка при обновлении заказа:', err)
@@ -232,36 +237,83 @@ onUnmounted(() => {
   min-height: 60vh;
 }
 
+.orders-container .row {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 1rem;
+  width: 100%;
+  margin: 0;
+}
+
+.orders-column {
+  width: 100%;
+  max-width: 100%;
+  transition: max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 0;
+}
+
+.orders-column.with-panel {
+  max-width: 42%;
+}
+
+.panel-column {
+  width: 58%;
+  max-width: 58%;
+  transition: max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .orders-list {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   max-height: calc(100vh - 200px);
   overflow-y: auto;
+  transition: opacity 0.2s ease;
 }
 
-.order-details-panel .card-body {
-  overflow-y: auto;
-  flex: 1;
-}
-
-.product-photo .no-photo {
-  width: 50px;
-  height: 50px;
-}
-
-.empty-state, .empty-products {
+.empty-state {
   color: #6c757d;
 }
 
-@media (max-width: 991.98px) {
-  .orders-list {
-    max-height: none;
-  }
+.panel-slide-enter-active,
+.panel-slide-leave-active {
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.orders-list, .order-details-panel {
-  transition: all 0.3s ease;
+.panel-slide-enter-from {
+  opacity: 0;
+  transform: translateX(25px);
+}
+
+.panel-slide-leave-to {
+  opacity: 0;
+  transform: translateX(25px);
+}
+
+@media (max-width: 991.98px) {
+  .orders-container .row {
+    flex-direction: column;
+  }
+
+  .orders-column,
+  .orders-column.with-panel,
+  .panel-column {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .orders-list {
+    max-height: none;
+    margin-bottom: 1rem;
+  }
+
+  .panel-slide-enter-from {
+    transform: translateY(30px);
+  }
+
+  .panel-slide-leave-to {
+    transform: translateY(30px);
+  }
 }
 
 .spinner-border {
@@ -269,15 +321,4 @@ onUnmounted(() => {
   height: 1rem;
 }
 
-@media (max-width: 991.98px) {
-  .slide-fade-enter-from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-
-  .slide-fade-leave-to {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-}
 </style>

@@ -35,7 +35,6 @@ export const products = {
     mutations: {
         SET_PRODUCTS(state: ProductsState, products: Product[]) {
             state.products = products
-            console.log(state.products)
             if (state.selectedType === 'all') {
                 state.filteredProducts = products
             } else {
@@ -62,7 +61,6 @@ export const products = {
 
         ADD_PRODUCT(state: ProductsState, product: Product) {
             state.products.unshift(product)
-            // Автоматически применяем фильтр к новому продукту
             if (state.selectedType === 'all' || product.type === state.selectedType) {
                 state.filteredProducts.unshift(product)
             }
@@ -73,17 +71,14 @@ export const products = {
             if (index !== -1) {
                 state.products.splice(index, 1, updatedProduct)
 
-                // Обновляем в filteredProducts с учетом фильтра
                 const filteredIndex = state.filteredProducts.findIndex(p => p._id === updatedProduct._id)
                 if (filteredIndex !== -1) {
                     if (state.selectedType === 'all' || updatedProduct.type === state.selectedType) {
                         state.filteredProducts.splice(filteredIndex, 1, updatedProduct)
                     } else {
-                        // Если продукт больше не соответствует фильтру - удаляем из filteredProducts
                         state.filteredProducts.splice(filteredIndex, 1)
                     }
                 } else if (state.selectedType === 'all' || updatedProduct.type === state.selectedType) {
-                    // Если продукт теперь соответствует фильтру - добавляем
                     state.filteredProducts.unshift(updatedProduct)
                 }
             }
@@ -105,11 +100,8 @@ export const products = {
                 const params = type && type !== 'all' ? { type } : {}
                 const products = await $api.get<Product[]>('/products', { params })
 
-                console.log('Fetched products:', products)
-
                 commit('SET_PRODUCTS', products)
 
-                // Если передан тип - применяем фильтр
                 if (type && type !== state.selectedType) {
                     commit('FILTER_PRODUCTS_BY_TYPE', type)
                 }

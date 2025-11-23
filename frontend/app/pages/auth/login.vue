@@ -3,14 +3,6 @@
     <div class="container">
       <div class="row justify-content-center">
         <div class="col-md-5 col-lg-4">
-          <div class="text-center mb-5">
-            <div class="logo mb-3">
-              <Package :size="48" class="text-white" />
-            </div>
-            <h1 class="text-white fw-light">INVENTORY</h1>
-            <p class="text-white-50">Система управления заказами и продуктами</p>
-          </div>
-
           <div class="auth-card card border-0 shadow-lg">
             <div class="card-body p-4">
               <div class="text-center mb-4">
@@ -126,17 +118,6 @@ onUnmounted(() => {
   border-radius: 16px;
   backdrop-filter: blur(10px);
   background: rgba(255, 255, 255, 0.95);
-}
-
-.logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 80px;
-  height: 80px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  backdrop-filter: blur(10px);
 }
 
 .input-group-text {

@@ -45,9 +45,15 @@ export const orders = {
         UPDATE_ORDER(state: OrdersState, updatedOrder: Order) {
             const index = state.orders.findIndex(o => o._id === updatedOrder._id)
             if (index !== -1) {
-                state.orders.splice(index, 1, updatedOrder)
+                const existingOrder = state.orders[index]
+                const orderWithProducts = {
+                    ...updatedOrder,
+                    products: updatedOrder.products || existingOrder.products || []
+                }
+
+                state.orders.splice(index, 1, orderWithProducts)
                 if (state.selectedOrder?._id === updatedOrder._id) {
-                    state.selectedOrder = updatedOrder
+                    state.selectedOrder = orderWithProducts
                 }
             }
         },
@@ -56,6 +62,40 @@ export const orders = {
             state.orders = state.orders.filter(o => o._id !== orderId)
             if (state.selectedOrder?._id === orderId) {
                 state.selectedOrder = null
+            }
+        },
+
+        ADD_PRODUCTS_TO_ORDER(state: OrdersState, { orderId, products }: { orderId: string; products: any[] }) {
+            const order = state.orders.find(o => o._id === orderId)
+            if (order) {
+                if (!order.products) order.products = []
+                order.products.push(...products)
+
+                if (state.selectedOrder?._id === orderId) {
+                    state.selectedOrder.products = [...order.products]
+                }
+            }
+        },
+
+        REMOVE_PRODUCT_FROM_ORDER(state: OrdersState, { orderId, productId }: { orderId: string; productId: string }) {
+            const order = state.orders.find(o => o._id === orderId)
+            if (order && order.products) {
+                order.products = order.products.filter(p => p._id !== productId)
+
+                if (state.selectedOrder?._id === orderId) {
+                    state.selectedOrder.products = order.products.filter(p => p._id !== productId)
+                }
+            }
+        },
+
+        UPDATE_ORDER_PRODUCTS(state: OrdersState, { orderId, products }: { orderId: string; products: any[] }) {
+            const order = state.orders.find(o => o._id === orderId)
+            if (order) {
+                order.products = products
+
+                if (state.selectedOrder?._id === orderId) {
+                    state.selectedOrder.products = products
+                }
             }
         },
 

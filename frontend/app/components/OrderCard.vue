@@ -131,7 +131,6 @@ const handleDelete = () => {
   border-color: #d1d9e6;
 }
 
-/* Внутренний зеленый бордер для активной карточки */
 .order-card.selected {
   background: #f8fff9;
   position: relative;

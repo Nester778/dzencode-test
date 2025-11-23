@@ -6,9 +6,8 @@
       </div>
       <div class="modal-body">
         <form @submit.prevent="submit">
-          <!-- Photo Upload -->
           <div class="mb-4">
-            <label class="form-label">Фото продукта</label>
+            <label class="form-label">Фото продукта <span class="text-muted small">(необязательно)</span></label>
             <div class="photo-upload-container">
               <div class="current-photo mb-3" v-if="formData.photo">
                 <p class="small text-muted mb-2">Выбранное фото:</p>
@@ -64,22 +63,27 @@
           </div>
 
           <div class="mb-3">
-            <label for="addProductTitle" class="form-label">Название продукта</label>
+            <label for="addProductTitle" class="form-label">Название продукта <span class="text-danger">*</span></label>
             <input
                 v-model="formData.title"
                 type="text"
                 class="form-control"
+                :class="{ 'is-invalid': errors.title }"
                 id="addProductTitle"
                 placeholder="Введите название продукта"
                 required
             >
+            <div v-if="errors.title" class="invalid-feedback">
+              {{ errors.title }}
+            </div>
           </div>
 
           <div class="mb-3">
-            <label for="addProductType" class="form-label">Тип продукта</label>
+            <label for="addProductType" class="form-label">Тип продукта <span class="text-danger">*</span></label>
             <select
                 v-model="formData.type"
                 class="form-select"
+                :class="{ 'is-invalid': errors.type }"
                 id="addProductType"
                 required
             >
@@ -89,60 +93,81 @@
               <option value="Phones">Телефоны</option>
               <option value="Tablets">Планшеты</option>
             </select>
+            <div v-if="errors.type" class="invalid-feedback">
+              {{ errors.type }}
+            </div>
           </div>
 
           <div class="mb-3">
-            <label for="addProductSpecification" class="form-label">Характеристики</label>
+            <label for="addProductSpecification" class="form-label">Характеристики <span class="text-danger">*</span></label>
             <textarea
                 v-model="formData.specification"
                 class="form-control"
+                :class="{ 'is-invalid': errors.specification }"
                 id="addProductSpecification"
                 rows="3"
                 placeholder="Введите характеристики продукта"
+                required
             ></textarea>
+            <div v-if="errors.specification" class="invalid-feedback">
+              {{ errors.specification }}
+            </div>
           </div>
 
           <div class="mb-3">
-            <label for="addProductSerialNumber" class="form-label">Серийный номер</label>
+            <label for="addProductSerialNumber" class="form-label">Серийный номер <span class="text-danger">*</span></label>
             <input
                 v-model="formData.serialNumber"
                 type="number"
                 class="form-control"
+                :class="{ 'is-invalid': errors.serialNumber }"
                 id="addProductSerialNumber"
                 placeholder="Введите серийный номер"
                 required
+                min="1"
             >
+            <div v-if="errors.serialNumber" class="invalid-feedback">
+              {{ errors.serialNumber }}
+            </div>
           </div>
 
           <div class="row">
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="addProductGuaranteeStart" class="form-label">Начало гарантии</label>
+                <label for="addProductGuaranteeStart" class="form-label">Начало гарантии <span class="text-danger">*</span></label>
                 <input
                     v-model="formData.guaranteeStart"
                     type="date"
                     class="form-control"
+                    :class="{ 'is-invalid': errors.guaranteeStart }"
                     id="addProductGuaranteeStart"
                     required
                 >
+                <div v-if="errors.guaranteeStart" class="invalid-feedback">
+                  {{ errors.guaranteeStart }}
+                </div>
               </div>
             </div>
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="addProductGuaranteeEnd" class="form-label">Окончание гарантии</label>
+                <label for="addProductGuaranteeEnd" class="form-label">Окончание гарантии <span class="text-danger">*</span></label>
                 <input
                     v-model="formData.guaranteeEnd"
                     type="date"
                     class="form-control"
+                    :class="{ 'is-invalid': errors.guaranteeEnd }"
                     id="addProductGuaranteeEnd"
                     required
                 >
+                <div v-if="errors.guaranteeEnd" class="invalid-feedback">
+                  {{ errors.guaranteeEnd }}
+                </div>
               </div>
             </div>
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Цены</label>
+            <label class="form-label">Цены <span class="text-danger">*</span></label>
             <div class="prices-container">
               <div
                   v-for="(price, index) in formData.prices"
@@ -155,9 +180,15 @@
                         v-model="price.value"
                         type="number"
                         class="form-control form-control-sm"
+                        :class="{ 'is-invalid': errors[`price_${index}`] }"
                         :placeholder="`Цена в ${price.symbol}`"
                         required
+                        min="0"
+                        step="0.01"
                     >
+                    <div v-if="errors[`price_${index}`]" class="invalid-feedback">
+                      {{ errors[`price_${index}`] }}
+                    </div>
                   </div>
                   <div class="col-md-3">
                     <select
@@ -214,7 +245,7 @@
         <button
             class="btn btn-success"
             @click="submit"
-            :disabled="loading || !formData.title"
+            :disabled="loading"
         >
           <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
           Создать продукт
@@ -262,8 +293,8 @@ const emit = defineEmits<Emits>()
 const fileInput = ref<HTMLInputElement>()
 const uploadedFile = ref<File | null>(null)
 const fileError = ref<string>('')
+const errors = ref<Record<string, string>>({})
 
-// Инициализируем пустую форму
 const formData = ref<ProductFormData>({
   photo: '',
   title: '',
@@ -280,7 +311,6 @@ const formData = ref<ProductFormData>({
   isNew: true
 })
 
-// Сбрасываем форму при открытии модального окна
 watch(() => props.show, (newVal) => {
   if (newVal) {
     resetForm()
@@ -305,6 +335,52 @@ const resetForm = () => {
   }
   uploadedFile.value = null
   fileError.value = ''
+  errors.value = {}
+}
+
+const validateForm = (): boolean => {
+  errors.value = {}
+
+  if (!formData.value.title.trim()) {
+    errors.value.title = 'Название продукта обязательно для заполнения'
+  }
+
+  if (!formData.value.type) {
+    errors.value.type = 'Тип продукта обязателен для выбора'
+  }
+
+  if (!formData.value.specification.trim()) {
+    errors.value.specification = 'Характеристики обязательны для заполнения'
+  }
+
+  if (!formData.value.serialNumber || formData.value.serialNumber <= 0) {
+    errors.value.serialNumber = 'Введите корректный серийный номер'
+  }
+
+  if (!formData.value.guaranteeStart) {
+    errors.value.guaranteeStart = 'Дата начала гарантии обязательна'
+  }
+
+  if (!formData.value.guaranteeEnd) {
+    errors.value.guaranteeEnd = 'Дата окончания гарантии обязательна'
+  }
+
+  formData.value.prices.forEach((price, index) => {
+    if (!price.value || price.value <= 0) {
+      errors.value[`price_${index}`] = `Цена в ${price.symbol} должна быть больше 0`
+    }
+  })
+
+  if (formData.value.guaranteeStart && formData.value.guaranteeEnd) {
+    const startDate = new Date(formData.value.guaranteeStart)
+    const endDate = new Date(formData.value.guaranteeEnd)
+
+    if (endDate < startDate) {
+      errors.value.guaranteeEnd = 'Дата окончания гарантии не может быть раньше даты начала'
+    }
+  }
+
+  return Object.keys(errors.value).length === 0
 }
 
 const handleImageError = (event: Event) => {
@@ -375,7 +451,9 @@ const close = () => {
 }
 
 const submit = () => {
-  if (!formData.value.title.trim()) return
+  if (!validateForm()) {
+    return
+  }
 
   if (fileError.value) {
     return
@@ -388,9 +466,9 @@ const submit = () => {
 
   const productData = {
     photo: formData.value.photo,
-    title: formData.value.title,
+    title: formData.value.title.trim(),
     type: formData.value.type,
-    specification: formData.value.specification,
+    specification: formData.value.specification.trim(),
     serialNumber: formData.value.serialNumber,
     guarantee: {
       start: formData.value.guaranteeStart,
@@ -398,11 +476,9 @@ const submit = () => {
     },
     price: prices,
     isNew: formData.value.isNew,
-    // Добавляем ID заказа для привязки продукта
     orderId: props.order._id
   }
 
-  // Отправляем массив с одним продуктом для совместимости с существующим интерфейсом
   emit('add-products', [productData])
 }
 </script>
@@ -531,6 +607,36 @@ const submit = () => {
 .alert-danger {
   padding: 0.5rem;
   font-size: 0.8rem;
+}
+
+.text-danger {
+  color: #dc3545 !important;
+}
+
+.text-muted {
+  color: #6c757d !important;
+}
+
+.invalid-feedback {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  font-size: 0.875em;
+  color: #dc3545;
+}
+
+.is-invalid {
+  border-color: #dc3545;
+  padding-right: calc(1.5em + 0.75rem);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath d='m5.8 3.6.4.4.4-.4'/%3e%3cpath d='M6 7v1'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right calc(0.375em + 0.1875rem) center;
+  background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.is-invalid:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
 }
 
 @media (max-width: 576px) {

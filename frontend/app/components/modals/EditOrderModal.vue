@@ -88,7 +88,6 @@ const formData = ref<OrderFormData>({
   date: ''
 })
 
-// Заполняем форму данными заказа при открытии модального окна
 watch(() => props.show, (newVal) => {
   if (newVal && props.order) {
     formData.value = {

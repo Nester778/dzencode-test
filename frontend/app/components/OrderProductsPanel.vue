@@ -2,12 +2,10 @@
   <div class="order-details-panel card h-100">
     <div class="card-header bg-white border-bottom">
       <div class="d-flex justify-content-between align-items-center">
-        <h5 class="mb-0 order-title" :title="order.title">
-          {{ truncatedTitle }}
-        </h5>
+        <h5 class="mb-0">{{ order.title }}</h5>
         <button
             class="btn btn-link text-muted p-0"
-            @click="handleClose"
+            @click="$emit('close')"
             :disabled="loading"
         >
           <X :size="20" />
@@ -47,15 +45,13 @@
         </div>
 
         <div v-else class="products-list">
-          <transition-group name="fade-list" tag="div">
-            <ProductCard
-                v-for="product in order.products"
-                :key="product._id"
-                :product="product"
-                :disabled="loading"
-                @delete="removeProduct"
-            />
-          </transition-group>
+          <ProductCard
+              v-for="product in order.products"
+              :key="product._id"
+              :product="product"
+              :disabled="loading"
+              @delete="removeProduct"
+          />
         </div>
       </div>
 
@@ -77,7 +73,7 @@
   <AddProductsModal
       :show="showAddProductsModal"
       :order="order"
-      :loading="isLoadingAddProducts"
+      :loading="loading"
       @update:show="showAddProductsModal = $event"
       @add-products="handleAddProducts"
       @close="closeAddProductsModal"
@@ -89,7 +85,6 @@ import { X, Package, Plus } from 'lucide-vue-next'
 import { useOrdersStore } from '~/composables/useStore'
 import ProductCard from '~/components/ProductCard.vue'
 import AddProductsModal from '~/components/modals/AddProductsModal.vue'
-import { computed } from 'vue'
 
 interface Props {
   order: any
@@ -99,6 +94,8 @@ interface Props {
 
 interface Emits {
   (e: 'close'): void
+  (e: 'remove-product', productId: string): void
+  (e: 'add-products', products: any[]): void
   (e: 'update:order', order: any): void
 }
 
@@ -106,21 +103,16 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const ordersStore = useOrdersStore()
-
 const showAddProductsModal = ref(false)
-const isLoadingAddProducts = ref(false)
 
-// Ограничение длины названия заказа
-const truncatedTitle = computed(() => {
-  const title = props.order.title || ''
-  const maxLength = 50 // Максимальная длина названия
-
-  if (title.length <= maxLength) {
-    return title
-  }
-
-  return title.substring(0, maxLength) + '...'
-})
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+}
 
 const calculateTotal = (order: any) => {
   if (!order.products || order.products.length === 0) return '0 ₴ 0 $'
@@ -135,7 +127,7 @@ const calculateTotal = (order: any) => {
     return sum + (usdPrice?.value || 0)
   }, 0)
 
-  return `${totalUAH.toLocaleString('ru-RU')} ₴ ${totalUSD.toLocaleString('ru-RU')} $`
+  return `${totalUSD.toLocaleString('ru-RU')} $ / ${totalUAH.toLocaleString('ru-RU')} ₴`
 }
 
 const openAddProductsModal = () => {
@@ -146,45 +138,41 @@ const closeAddProductsModal = () => {
   showAddProductsModal.value = false
 }
 
-const handleClose = () => {
-  emit('close')
-}
-
 const removeProduct = async (productId: string) => {
   try {
     await ordersStore.removeProductFromOrder({
       orderId: props.order._id,
-      productId
+      productId: productId
     })
+
     const updatedOrder = {
       ...props.order,
       products: props.order.products.filter((p: any) => p._id !== productId)
     }
     emit('update:order', updatedOrder)
-  } catch (err) {
-    console.error('Ошибка при удалении продукта:', err)
+
+  } catch (error) {
+    console.error('Ошибка при удалении продукта:', error)
   }
 }
 
 const handleAddProducts = async (products: any[]) => {
-  isLoadingAddProducts.value = true
   try {
     const addedProducts = await ordersStore.addProductsToOrder({
       orderId: props.order._id,
-      products
+      products: products
     })
 
     const updatedOrder = {
       ...props.order,
       products: [...(props.order.products || []), ...addedProducts]
     }
-    emit('update:order', updatedOrder)
 
+    emit('update:order', updatedOrder)
     closeAddProductsModal()
-  } catch (err) {
-    console.error('Ошибка при добавлении продуктов:', err)
-  } finally {
-    isLoadingAddProducts.value = false
+
+  } catch (error) {
+    console.error('Ошибка при добавлении продуктов:', error)
   }
 }
 </script>
@@ -196,36 +184,11 @@ const handleAddProducts = async (products: any[]) => {
   height: calc(100vh - 200px);
   display: flex;
   flex-direction: column;
-  animation: panel-appear 0.3s ease-out;
-}
-
-@keyframes panel-appear {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
 }
 
 .order-details-panel .card-body {
   overflow-y: auto;
   flex: 1;
-}
-
-/* Стили для ограниченного названия заказа */
-.order-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #333;
-  margin: 0;
-  max-width: 300px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.3;
 }
 
 .section-title {
@@ -235,6 +198,9 @@ const handleAddProducts = async (products: any[]) => {
 }
 
 .products-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   max-height: 400px;
   overflow-y: auto;
 }
@@ -248,28 +214,13 @@ const handleAddProducts = async (products: any[]) => {
   border-color: #28a745;
 }
 
-/* Анимации для списка продуктов */
-.fade-list-enter-active,
-.fade-list-leave-active {
-  transition: all 0.3s ease;
+.summary-label {
+  font-weight: 500;
+  color: #333;
 }
 
-.fade-list-enter-from {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-.fade-list-leave-to {
-  opacity: 0;
-  transform: translateY(10px);
-}
-
-.fade-list-leave-active {
-  position: absolute;
-}
-
-.fade-list-move {
-  transition: transform 0.3s ease;
+.summary-value {
+  font-size: 1.1rem;
 }
 
 @media (max-width: 991.98px) {
@@ -278,26 +229,8 @@ const handleAddProducts = async (products: any[]) => {
     height: auto;
   }
 
-  .order-title {
-    max-width: 200px;
-  }
-
-  @keyframes panel-appear {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-}
-
-@media (max-width: 576px) {
-  .order-title {
-    max-width: 150px;
-    font-size: 1rem;
+  .products-list {
+    max-height: none;
   }
 }
 </style>

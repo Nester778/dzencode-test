@@ -56,7 +56,6 @@
     </div>
   </div>
 
-  <!-- Модальное окно удаления продукта -->
   <DeleteProductModal
       :show="showDeleteModal"
       :product="productToDelete"

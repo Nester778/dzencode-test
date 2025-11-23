@@ -469,7 +469,6 @@ const submit = () => {
   box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
 }
 
-/* Компактные стили для полей цены */
 .price-input-group {
   padding: 6px;
   background: #f8f9fa;

@@ -1,7 +1,6 @@
 <template>
   <div class="product-card card" @click="handleClick">
     <div class="card-body p-0">
-      <!-- Product Image -->
       <div class="product-image-container">
         <img
             :src="product.photo"
@@ -17,7 +16,6 @@
       </div>
 
       <div class="product-content p-4">
-        <!-- Header -->
         <div class="product-header mb-3">
           <h5 class="product-title mb-2">{{ product.title }}</h5>
           <div class="product-type-badge">
@@ -28,13 +26,11 @@
           </div>
         </div>
 
-        <!-- Specification -->
         <div v-if="product.specification" class="specification-section mb-3">
           <div class="section-label small text-muted mb-2">Характеристики</div>
           <p class="specification-text small mb-0">{{ product.specification }}</p>
         </div>
 
-        <!-- Guarantee -->
         <div class="guarantee-section mb-3">
           <div class="section-label small text-muted mb-2">Гарантия</div>
           <div class="guarantee-dates">
@@ -49,7 +45,6 @@
           </div>
         </div>
 
-        <!-- Prices -->
         <div class="prices-section mb-3">
           <div class="section-label small text-muted mb-2">Цена</div>
           <div class="prices-list">
@@ -65,7 +60,6 @@
           </div>
         </div>
 
-        <!-- Meta Information -->
         <div class="meta-section">
           <div class="row g-2">
             <div class="col-12">

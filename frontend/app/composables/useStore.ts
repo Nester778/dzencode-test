@@ -47,6 +47,20 @@ export const useOrdersStore = () => {
         },
         updateOrder: (orderData: { _id: string; title: string; description: string; date: string }) =>
             store.dispatch('orders/updateOrder', orderData),
+        addProductsToOrder: (data: { orderId: string; products: any[] }) => {
+            if (!store) {
+                console.warn('Store not available')
+                return Promise.resolve([])
+            }
+            return store.dispatch('orders/addProductsToOrder', data)
+        },
+        removeProductFromOrder: (data: { orderId: string; productId: string }) => {
+            if (!store) {
+                console.warn('Store not available')
+                return Promise.resolve()
+            }
+            return store.dispatch('orders/removeProductFromOrder', data)
+        },
         deleteOrder: (id: string) => {
             if (!store) {
                 console.warn('Store not available')
@@ -74,20 +88,6 @@ export const useOrdersStore = () => {
                 return
             }
             store.dispatch('orders/clearError')
-        },
-        addProductsToOrder: (data: { orderId: string; products: any[] }) => {
-            if (!store) {
-                console.warn('Store not available')
-                return Promise.resolve([])
-            }
-            return store.dispatch('orders/addProductsToOrder', data)
-        },
-        removeProductFromOrder: (data: { orderId: string; productId: string }) => {
-            if (!store) {
-                console.warn('Store not available')
-                return Promise.resolve()
-            }
-            return store.dispatch('orders/removeProductFromOrder', data)
         }
     }
 }

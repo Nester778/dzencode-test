@@ -1,4 +1,3 @@
-<!-- components/TopMenu.vue -->
 <template>
   <header class="top-header navbar navbar-light bg-white border-bottom fixed-top">
     <div class="container">

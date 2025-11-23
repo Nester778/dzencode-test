@@ -21,7 +21,6 @@ export default defineNuxtPlugin(() => {
     // Request interceptor
     api.interceptors.request.use(
         (config) => {
-            // Проверяем что мы на клиенте перед использованием localStorage
             if (process.client) {
                 const token = safeLocalStorage.getItem('auth_token')
                 if (token) {
@@ -41,10 +40,8 @@ export default defineNuxtPlugin(() => {
         (error) => {
             if (error.response?.status === 401 && process.client) {
                 console.log('401 error - clearing auth token')
-                // Очищаем невалидный токен
                 safeLocalStorage.removeItem('auth_token')
 
-                // Редирект на страницу логина
                 if (window.location.pathname !== '/auth/login') {
                     window.location.href = '/auth/login'
                 }
