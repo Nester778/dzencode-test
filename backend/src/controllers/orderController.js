@@ -5,7 +5,6 @@ export const getOrders = async (req, res) => {
         const orders = await Order.find({ user: req.user.id })
             .populate('products')
             .sort({ date: -1 });
-
         res.json(orders);
     } catch (error) {
         console.error('Get orders error:', error);
@@ -50,6 +49,34 @@ export const createOrder = async (req, res) => {
     }
 };
 
+export const updateOrder = async (req, res) => {
+    try {
+        const { title, description, date } = req.body;
+
+        const order = await Order.findOneAndUpdate(
+            {
+                _id: req.params.id,
+                user: req.user.id
+            },
+            {
+                title,
+                description,
+                date
+            },
+            { new: true }
+        );
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        res.json(order);
+    } catch (error) {
+        console.error('Update order error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 export const deleteOrder = async (req, res) => {
     try {
         const order = await Order.findOne({
@@ -61,7 +88,6 @@ export const deleteOrder = async (req, res) => {
             return res.status(404).json({ message: 'Order not found' });
         }
 
-        // Delete associated products
         await Product.deleteMany({ order: req.params.id });
         await Order.findByIdAndDelete(req.params.id);
 

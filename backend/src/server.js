@@ -47,14 +47,12 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// WebSocket для счетчика активных вкладок
 const activeSessions = new Set();
 
 io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);
     activeSessions.add(socket.id);
 
-    // Отправляем текущее количество активных сессий
     io.emit('activeSessions', activeSessions.size);
 
     socket.on('disconnect', () => {
@@ -92,7 +90,7 @@ const initializeData = async () => {
             });
 
             await testUser.save();
-            console.log('✅ Test user created: test@example.com / password123');
+            console.log('Test user created: test@example.com / password123');
 
             // Seed initial data
             await seedInitialData(testUser._id);
@@ -125,9 +123,9 @@ const startServer = async () => {
     await initializeData();
 
     httpServer.listen(PORT, () => {
-        console.log(`🚀 Server running on port ${PORT}`);
-        console.log(`📊 Environment: ${process.env.NODE_ENV}`);
-        console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+        console.log(`Server running on port ${PORT}`);
+        console.log(`Environment: ${process.env.NODE_ENV}`);
+        console.log(`Health check: http://localhost:${PORT}/api/health`);
     });
 };
 

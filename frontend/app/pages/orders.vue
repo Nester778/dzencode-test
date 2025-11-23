@@ -1,325 +1,156 @@
 <template>
   <div class="orders-page">
     <div class="page-header d-flex justify-content-between align-items-center mb-4">
-      <h1 class="page-title">Приходы / {{ orders.length }}</h1>
-      <button class="btn btn-success">
+      <h1 class="page-title">Приходы / {{ orders.value.length }}</h1>
+      <button class="btn btn-success" @click="openCreateModal">
         <Plus :size="16" class="me-2" />
         Новый приход
       </button>
     </div>
 
-    <div class="orders-container">
+    <div v-if="isLoading.value" class="text-center py-5">
+      <div class="spinner-border text-success" role="status">
+        <span class="visually-hidden">Загрузка...</span>
+      </div>
+      <p class="mt-3 text-muted">Загрузка заказов...</p>
+    </div>
+
+    <div v-else class="orders-container">
       <div class="row g-3">
-        <div class="col-12" :class="{ 'col-lg-5': selectedOrder }">
+        <div class="orders-column" :class="{ 'with-panel': selectedOrder }">
           <div class="orders-list">
-            <div
-                v-for="order in orders"
-                :key="order.id"
-                class="order-item card"
-                :class="{ 'selected': selectedOrder?.id === order.id }"
-                @click="selectOrder(order)"
-            >
-              <div class="card-body p-3">
-                <div class="order-content">
-                  <div class="order-header d-flex justify-content-between align-items-start mb-2">
-                    <h6 class="order-title mb-0">{{ order.title }}</h6>
-                    <button
-                        class="btn btn-link text-danger p-0"
-                        @click.stop="openDeleteModal(order)"
-                    >
-                      <Trash2 :size="14" />
-                    </button>
-                  </div>
-
-                  <div class="order-details">
-                    <div class="order-description text-muted small mb-2">
-                      {{ order.description }}
-                    </div>
-
-                    <div class="order-meta d-flex justify-content-between align-items-center">
-                      <div class="products-count">
-                        {{ getProductsCount(order) }} Продукта
-                      </div>
-                      <div class="order-date">
-                        {{ formatDateShort(order.date) }}
-                      </div>
-                      <div class="order-total">
-                        {{ calculateTotal(order) }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div v-if="orders.value.length === 0" class="empty-state text-center py-5">
+              <Package :size="64" class="text-muted mb-3" />
+              <h5>Заказов пока нет</h5>
+              <p class="text-muted">Создайте первый заказ чтобы начать работу</p>
+              <button class="btn btn-success mt-2" @click="openCreateModal">
+                <Plus :size="16" class="me-2" />
+                Создать заказ
+              </button>
             </div>
+
+            <OrderCard
+                v-for="order in orders.value"
+                :key="order._id"
+                :order="order"
+                :selected="selectedOrder?._id === order._id"
+                @select="selectOrder"
+                @edit="openEditModal"
+                @delete="openDeleteModal"
+                :disabled="isLoading.value"
+            />
           </div>
         </div>
-        <div v-if="selectedOrder" class="col-12 col-lg-7">
-          <div class="order-details-panel card h-100">
-            <div class="card-header bg-white border-bottom">
-              <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">{{ selectedOrder.title }}</h5>
-                <button
-                    class="btn btn-link text-muted p-0"
-                    @click="selectedOrder = null"
-                >
-                  <X :size="20" />
-                </button>
-              </div>
-            </div>
 
-            <div class="card-body">
-              <div class="products-section">
-                <h6 class="section-title mb-3">Продукты в заказе</h6>
-                <div class="products-list">
-                  <div
-                      v-for="product in selectedOrder.products"
-                      :key="product.id"
-                      class="product-item card mb-2"
-                  >
-                    <div class="card-body p-3">
-                      <div class="row align-items-center">
-                        <div class="col-md-4">
-                          <div class="d-flex align-items-center">
-                            <div class="product-photo me-3">
-                              <img
-                                  v-if="product.photo"
-                                  :src="product.photo"
-                                  :alt="product.title"
-                                  class="img-thumbnail"
-                              >
-                              <div v-else class="no-photo bg-light rounded d-flex align-items-center justify-content-center">
-                                <Package :size="24" class="text-muted" />
-                              </div>
-                            </div>
-                            <div>
-                              <div class="product-title fw-semibold">{{ product.title }}</div>
-                              <div class="product-type text-muted small">{{ product.type }}</div>
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col-md-3">
-                          <div class="guarantee-info">
-                            <div class="guarantee-date small">
-                              {{ formatDate(product.guarantee.start) }} - {{ formatDate(product.guarantee.end) }}
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col-md-3">
-                          <div class="price-info">
-                            <div
-                                v-for="price in product.price"
-                                :key="price.symbol"
-                                class="price-item"
-                                :class="{ 'default-price': price.isDefault }"
-                            >
-                              {{ price.value }} {{ price.symbol }}
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col-md-2 text-end">
-                          <button class="btn btn-outline-secondary btn-sm">
-                            <Edit :size="14" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="order-summary mt-4 pt-3 border-top">
-                <div class="row">
-                  <div class="col-6">
-                    <div class="summary-label">Общая сумма:</div>
-                  </div>
-                  <div class="col-6 text-end">
-                    <div class="summary-value fw-bold text-success">
-                      {{ calculateTotal(selectedOrder) }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <transition name="panel-slide" mode="out-in">
+          <div v-if="selectedOrder" class="panel-column">
+            <OrderProductsPanel
+                :order="selectedOrder"
+                :loading="isLoading.value"
+                :isLoadingProducts="isLoadingProducts"
+                @close="selectedOrder = null"
+                @update:order="handleOrderUpdate"
+            />
           </div>
-        </div>
+        </transition>
       </div>
     </div>
 
-    <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
-      <div class="modal-content card animate__animated animate__zoomIn">
-        <div class="card-header">
-          <h5 class="mb-0">Удалить приход</h5>
-        </div>
-        <div class="card-body">
-          <p>Вы уверены что хотите удалить "{{ orderToDelete?.title }}"?</p>
-          <p class="text-muted small">Это действие нельзя отменить.</p>
-        </div>
-        <div class="card-footer d-flex gap-2 justify-content-end">
-          <button class="btn btn-secondary" @click="closeDeleteModal">Отмена</button>
-          <button class="btn btn-danger" @click="confirmDelete">Удалить</button>
-        </div>
-      </div>
-    </div>
+    <DeleteOrderModal
+        :show="showDeleteModal"
+        :order="orderToDelete"
+        :loading="isLoading.value"
+        @update:show="showDeleteModal = $event"
+        @confirm="confirmDelete"
+        @close="closeDeleteModal"
+    />
+
+    <CreateOrderModal
+        :show="showCreateModal"
+        :loading="isLoading.value"
+        @update:show="showCreateModal = $event"
+        @create="createOrder"
+        @close="closeCreateModal"
+    />
+
+    <EditOrderModal
+        :show="showEditModal"
+        :order="orderToEdit"
+        :loading="isLoadingEdit"
+        @update:show="showEditModal = $event"
+        @update="handleUpdateOrder"
+        @close="closeEditModal"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { Plus, Trash2, X, Package, Edit } from 'lucide-vue-next'
+import { Plus, Package } from 'lucide-vue-next'
+import { useOrdersStore } from '~/composables/useStore'
+import OrderCard from '~/components/OrderCard.vue'
+import DeleteOrderModal from '~/components/modals/DeleteOrderModal.vue'
+import CreateOrderModal from '~/components/modals/CreateOrderModal.vue'
+import EditOrderModal from '~/components/modals/EditOrderModal.vue'
+import OrderProductsPanel from '~/components/OrderProductsPanel.vue'
 
-interface Price {
-  value: number
-  symbol: string
-  isDefault: boolean
-}
+const ordersStore = useOrdersStore()
 
-interface Guarantee {
-  start: string
-  end: string
-}
+const orders = computed(() => ordersStore.orders)
+const isLoading = computed(() => ordersStore.isLoading)
+const error = computed(() => ordersStore.error)
 
-interface Product {
-  id: number
-  serialNumber: number
-  isNew: number
-  photo: string
-  title: string
-  type: string
-  specification: string
-  guarantee: Guarantee
-  price: Price[]
-  order: number
-  date: string
-}
-
-interface Order {
-  id: number
-  title: string
-  date: string
-  description: string
-  products: Product[]
-}
-
-const orders = ref<Order[]>([])
-const selectedOrder = ref<Order | null>(null)
+const selectedOrder = ref<any>(null)
 const showDeleteModal = ref(false)
-const orderToDelete = ref<Order | null>(null)
+const showCreateModal = ref(false)
+const showEditModal = ref(false)
+const orderToDelete = ref<any>(null)
+const orderToEdit = ref<any>(null)
+const isLoadingProducts = ref(false)
+const isLoadingEdit = ref(false)
 
-onMounted(() => {
-  loadSampleData()
+onMounted(async () => {
+  await fetchOrders()
 })
 
-const loadSampleData = () => {
-  const sampleProducts: Product[] = [
-    {
-      id: 1,
-      serialNumber: 1234,
-      isNew: 1,
-      photo: 'pathToFile.jpg',
-      title: 'Product 1',
-      type: 'Monitors',
-      specification: 'Specification 1',
-      guarantee: {
-        start: '2017-06-29 12:09:33',
-        end: '2018-06-29 12:09:33'
-      },
-      price: [
-        { value: 100, symbol: 'USD', isDefault: false },
-        { value: 2600, symbol: 'UAH', isDefault: true }
-      ],
-      order: 1,
-      date: '2017-06-29 12:09:33'
-    },
-    {
-      id: 2,
-      serialNumber: 5678,
-      isNew: 1,
-      photo: 'pathToFile.jpg',
-      title: 'Product 2',
-      type: 'Phones',
-      specification: 'Specification 2',
-      guarantee: {
-        start: '2017-06-29 12:09:33',
-        end: '2018-06-29 12:09:33'
-      },
-      price: [
-        { value: 200, symbol: 'USD', isDefault: false },
-        { value: 5200, symbol: 'UAH', isDefault: true }
-      ],
-      order: 2,
-      date: '2017-06-29 12:09:33'
-    }
-  ]
-
-  orders.value = [
-    {
-      id: 1,
-      title: 'Длинное прердинное длинночее название прихода',
-      date: '2017-04-06T17:20:00',
-      description: 'Описание прихода 1',
-      products: Array(23).fill(null).map((_, i) => ({
-        ...sampleProducts[0],
-        id: i + 1,
-        title: `Product ${i + 1}`,
-        price: [
-          { value: 100 + i * 10, symbol: 'USD', isDefault: false },
-          { value: 2600 + i * 100, symbol: 'UAH', isDefault: true }
-        ]
-      }))
-    },
-    {
-      id: 2,
-      title: 'Длинное название прихода',
-      date: '2017-09-06T17:20:00',
-      description: 'Описание прихода 2',
-      products: Array(23).fill(null).map((_, i) => ({
-        ...sampleProducts[1],
-        id: i + 24,
-        title: `Product ${i + 24}`,
-        price: [
-          { value: 200 + i * 10, symbol: 'USD', isDefault: false },
-          { value: 5200 + i * 100, symbol: 'UAH', isDefault: true }
-        ]
-      }))
-    },
-    {
-      id: 3,
-      title: 'Длинное прердинное длинночее название прихода',
-      date: '2017-06-06T17:20:00',
-      description: 'Описание прихода 3',
-      products: Array(15).fill(null).map((_, i) => ({
-        ...sampleProducts[0],
-        id: i + 47,
-        title: `Product ${i + 47}`,
-        price: [
-          { value: 150 + i * 10, symbol: 'USD', isDefault: false },
-          { value: 3900 + i * 100, symbol: 'UAH', isDefault: true }
-        ]
-      }))
-    },
-    {
-      id: 4,
-      title: 'Длинное прердинное название прихода',
-      date: '2017-02-06T17:20:00',
-      description: 'Описание прихода 4',
-      products: Array(8).fill(null).map((_, i) => ({
-        ...sampleProducts[1],
-        id: i + 62,
-        title: `Product ${i + 62}`,
-        price: [
-          { value: 180 + i * 10, symbol: 'USD', isDefault: false },
-          { value: 4680 + i * 100, symbol: 'UAH', isDefault: true }
-        ]
-      }))
-    }
-  ]
+const fetchOrders = async () => {
+  try {
+    await ordersStore.fetchOrders()
+  } catch (err) {
+    console.error('Ошибка при загрузке заказов:', err)
+  }
 }
 
-const selectOrder = (order: Order) => {
+const selectOrder = async (order: any) => {
   selectedOrder.value = order
+  if (order.products && order.products.length === 0) {
+    await loadOrderProducts(order._id)
+  }
 }
 
-const openDeleteModal = (order: Order) => {
+const loadOrderProducts = async (orderId: string) => {
+  isLoadingProducts.value = true
+  try {
+    await new Promise(resolve => setTimeout(resolve, 500))
+  } catch (err) {
+    console.error('Ошибка при загрузке продуктов:', err)
+  } finally {
+    isLoadingProducts.value = false
+  }
+}
+
+const openEditModal = (order: any) => {
+  orderToEdit.value = order
+  showEditModal.value = true
+}
+
+const openDeleteModal = (order: any) => {
   orderToDelete.value = order
   showDeleteModal.value = true
+}
+
+const closeEditModal = () => {
+  showEditModal.value = false
+  orderToEdit.value = null
 }
 
 const closeDeleteModal = () => {
@@ -327,52 +158,62 @@ const closeDeleteModal = () => {
   orderToDelete.value = null
 }
 
-const confirmDelete = () => {
+const confirmDelete = async () => {
   if (!orderToDelete.value) return
 
-  orders.value = orders.value.filter(o => o.id !== orderToDelete.value!.id)
-  if (selectedOrder.value?.id === orderToDelete.value.id) {
-    selectedOrder.value = null
+  try {
+    await ordersStore.deleteOrder(orderToDelete.value._id)
+    closeDeleteModal()
+
+    if (selectedOrder.value?._id === orderToDelete.value._id) {
+      selectedOrder.value = null
+    }
+  } catch (err) {
+    console.error('Ошибка при удалении заказа:', err)
   }
-  closeDeleteModal()
 }
 
-const getProductsCount = (order: Order) => {
-  return order.products?.length || 0
+const handleOrderUpdate = (updatedOrder: any) => {
+  selectedOrder.value = updatedOrder
 }
 
-const formatDateShort = (dateString: string) => {
-  const date = new Date(dateString)
-  const day = date.getDate().toString().padStart(2, '0')
-  const month = date.toLocaleDateString('ru-RU', { month: 'short' })
-  const year = date.getFullYear()
-  return `${day} / ${month} / ${year}`
+const handleUpdateOrder = async (orderData: any) => {
+  isLoadingEdit.value = true
+  try {
+    const updatedOrder = await ordersStore.updateOrder(orderData)
+
+    if (selectedOrder.value?._id === orderData._id) {
+      selectedOrder.value = { ...selectedOrder.value, ...updatedOrder }
+    }
+
+    closeEditModal()
+  } catch (err) {
+    console.error('Ошибка при обновлении заказа:', err)
+  } finally {
+    isLoadingEdit.value = false
+  }
 }
 
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  })
+const openCreateModal = () => {
+  showCreateModal.value = true
 }
 
-const calculateTotal = (order: Order) => {
-  if (!order.products) return '0 ₴'
-
-  const total = order.products.reduce((sum, product) => {
-    const uahPrice = product.price.find(p => p.symbol === 'UAH')
-    return sum + (uahPrice?.value || 0)
-  }, 0)
-
-  const usdTotal = order.products.reduce((sum, product) => {
-    const usdPrice = product.price.find(p => p.symbol === 'USD')
-    return sum + (usdPrice?.value || 0)
-  }, 0)
-
-  return `${total.toLocaleString('ru-RU')} ₴ ${usdTotal.toLocaleString('ru-RU')} $`
+const closeCreateModal = () => {
+  showCreateModal.value = false
 }
+
+const createOrder = async (orderData: any) => {
+  try {
+    await ordersStore.createOrder(orderData)
+    closeCreateModal()
+  } catch (err) {
+    console.error('Ошибка при создании заказа:', err)
+  }
+}
+
+onUnmounted(() => {
+  ordersStore.clearError()
+})
 </script>
 
 <style scoped>
@@ -396,162 +237,88 @@ const calculateTotal = (order: Order) => {
   min-height: 60vh;
 }
 
+.orders-container .row {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 1rem;
+  width: 100%;
+  margin: 0;
+}
+
+.orders-column {
+  width: 100%;
+  max-width: 100%;
+  transition: max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 0;
+}
+
+.orders-column.with-panel {
+  max-width: 42%;
+}
+
+.panel-column {
+  width: 58%;
+  max-width: 58%;
+  transition: max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .orders-list {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   max-height: calc(100vh - 200px);
   overflow-y: auto;
-}
-
-.order-item {
-  border: 2px solid transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
-
-.order-item:hover {
-  border-color: #e9ecef;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.order-item.selected {
-  border-color: #28a745;
-  background-color: #f8fff9;
-}
-
-.order-title {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #333;
-  line-height: 1.3;
-}
-
-.order-description {
-  font-size: 0.8rem;
-  line-height: 1.2;
-}
-
-.order-meta {
-  font-size: 0.8rem;
-  color: #6c757d;
-}
-
-.products-count {
-  font-weight: 500;
-}
-
-.order-date {
-  color: #495057;
-}
-
-.order-total {
-  font-weight: 600;
-  color: #28a745;
-}
-
-.order-details-panel {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  height: calc(100vh - 200px);
-  display: flex;
-  flex-direction: column;
-}
-
-.order-details-panel .card-body {
-  overflow-y: auto;
-  flex: 1;
-}
-
-.section-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.products-list {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.product-item {
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-
-.product-item:hover {
-  border-color: #28a745;
-}
-
-.product-photo .no-photo {
-  width: 50px;
-  height: 50px;
-}
-
-.product-title {
-  font-size: 0.9rem;
-  margin-bottom: 2px;
-}
-
-.product-type {
-  font-size: 0.8rem;
-}
-
-.guarantee-date {
-  color: #6c757d;
-}
-
-.price-item {
-  font-size: 0.85rem;
-  margin-bottom: 2px;
-}
-
-.price-item.default-price {
-  font-weight: 600;
-  color: #28a745;
+  transition: opacity 0.2s ease;
 }
 
 .empty-state {
   color: #6c757d;
-  margin-top: 2rem;
 }
 
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1050;
+.panel-slide-enter-active,
+.panel-slide-leave-active {
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.modal-content {
-  max-width: 400px;
-  width: 90%;
-  border: none;
-  border-radius: 8px;
+.panel-slide-enter-from {
+  opacity: 0;
+  transform: translateX(25px);
+}
+
+.panel-slide-leave-to {
+  opacity: 0;
+  transform: translateX(25px);
 }
 
 @media (max-width: 991.98px) {
+  .orders-container .row {
+    flex-direction: column;
+  }
+
+  .orders-column,
+  .orders-column.with-panel,
+  .panel-column {
+    width: 100%;
+    max-width: 100%;
+  }
+
   .orders-list {
     max-height: none;
+    margin-bottom: 1rem;
   }
 
-  .order-details-panel {
-    margin-top: 2rem;
-    height: auto;
+  .panel-slide-enter-from {
+    transform: translateY(30px);
+  }
+
+  .panel-slide-leave-to {
+    transform: translateY(30px);
   }
 }
 
-.orders-list, .order-details-panel {
-  transition: all 0.3s ease;
+.spinner-border {
+  width: 1rem;
+  height: 1rem;
 }
+
 </style>

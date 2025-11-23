@@ -3,14 +3,6 @@
     <div class="container">
       <div class="row justify-content-center">
         <div class="col-md-6 col-lg-5">
-          <div class="text-center mb-5">
-            <div class="logo mb-3">
-              <Package :size="48" class="text-white" />
-            </div>
-            <h1 class="text-white fw-light">INVENTORY</h1>
-            <p class="text-white-50">Создайте новый аккаунт</p>
-          </div>
-
           <div class="auth-card card border-0 shadow-lg">
             <div class="card-body p-4">
               <div class="text-center mb-4">
@@ -35,7 +27,6 @@
                     >
                   </div>
                 </div>
->
                 <div class="mb-3">
                   <label for="email" class="form-label small text-muted fw-semibold">Email</label>
                   <div class="input-group">
@@ -97,10 +88,9 @@
                 <button
                     type="submit"
                     class="btn btn-success w-100 py-2 fw-semibold"
-                    :disabled="loading || form.password !== form.confirmPassword"
+                    :disabled="form.password !== form.confirmPassword"
                 >
-                  <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                  <span v-else><UserPlus :size="16" class="me-2" /></span>
+                  <span><UserPlus :size="16" class="me-2" /></span>
                   Создать аккаунт
                 </button>
               </form>
@@ -132,12 +122,13 @@
 
 <script setup lang="ts">
 import { Package, Mail, Lock, User, UserPlus, LogIn } from 'lucide-vue-next'
+import { useAuthStore } from '~/composables/useStore'
 
 definePageMeta({
   layout: 'auth'
 })
 
-const router = useRouter()
+const authStore = useAuthStore()
 
 const form = ref({
   name: '',
@@ -146,35 +137,25 @@ const form = ref({
   confirmPassword: ''
 })
 
-const loading = ref(false)
+const isLoading = computed(() => authStore.isLoading)
+const error = computed(() => authStore.error)
 
 const handleRegister = async () => {
-  if (form.value.password !== form.value.confirmPassword) {
-    return
-  }
 
-  loading.value = true
   try {
-    console.log('Registration attempt:', form.value)
-
-    await new Promise(resolve => setTimeout(resolve, 2000))
-
-    localStorage.setItem('auth_token', 'fake-jwt-token')
-    localStorage.setItem('user', JSON.stringify({
-      id: '2',
+    await authStore.register({
       name: form.value.name,
-      email: form.value.email
-    }))
-
-    console.log('Registration successful!')
-
-    router.push('/orders')
+      email: form.value.email,
+      password: form.value.password
+    })
   } catch (error) {
-    console.error('Registration error:', error)
-  } finally {
-    loading.value = false
+    console.error('Registration failed:', error)
   }
 }
+
+onUnmounted(() => {
+  authStore.clearError()
+})
 </script>
 
 <style scoped>
@@ -186,17 +167,6 @@ const handleRegister = async () => {
   border-radius: 16px;
   backdrop-filter: blur(10px);
   background: rgba(255, 255, 255, 0.95);
-}
-
-.logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 80px;
-  height: 80px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  backdrop-filter: blur(10px);
 }
 
 .input-group-text {
