@@ -18,10 +18,6 @@
                 <p class="text-muted small">Введите ваши учетные данные</p>
               </div>
 
-              <div v-if="error" class="alert alert-danger small mb-3">
-                {{ error }}
-              </div>
-
               <form @submit.prevent="handleLogin">
                 <div class="mb-3">
                   <label for="email" class="form-label small text-muted fw-semibold">Email</label>

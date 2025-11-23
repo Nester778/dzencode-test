@@ -5,15 +5,63 @@ const generateToken = (userId) => {
     return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
+export const login = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // Find user
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({
+                message: 'Invalid credentials',
+                data: null
+            });
+        }
+
+        // Check password
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return res.status(400).json({
+                message: 'Invalid credentials',
+                data: null
+            });
+        }
+
+        const token = generateToken(user._id);
+
+        const response = {
+            token,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email
+            }
+        };
+
+        res.json({
+            message: 'Login successful',
+            data: response
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({
+            message: 'Server error during login',
+            data: null
+        });
+    }
+};
+
 export const register = async (req, res) => {
     try {
-        console.log("register")
         const { name, email, password } = req.body;
 
         // Check if user exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ message: 'User already exists' });
+            return res.status(400).json({
+                message: 'User already exists',
+                data: null
+            });
         }
 
         // Create user
@@ -23,50 +71,25 @@ export const register = async (req, res) => {
         // Generate token
         const token = generateToken(user._id);
 
-        res.status(201).json({
+        const response = {
             token,
             user: {
                 id: user._id,
                 name: user.name,
                 email: user.email
             }
+        };
+
+        res.status(201).json({
+            message: 'Registration successful',
+            data: response
         });
     } catch (error) {
         console.error('Register error:', error);
-        res.status(500).json({ message: 'Server error during registration' });
-    }
-};
-
-export const login = async (req, res) => {
-    try {
-        const { email, password } = req.body;
-
-        // Find user
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(400).json({ message: 'Invalid credentials' });
-        }
-
-        // Check password
-        const isMatch = await user.comparePassword(password);
-        if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid credentials' });
-        }
-
-        // Generate token
-        const token = generateToken(user._id);
-
-        res.json({
-            token,
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email
-            }
+        res.status(500).json({
+            message: 'Server error during registration',
+            data: null
         });
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ message: 'Server error during login' });
     }
 };
 

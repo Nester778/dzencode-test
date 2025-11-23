@@ -52,24 +52,69 @@ import { useAuthStore } from '~/composables/useStore'
 const authStore = useAuthStore()
 const route = useRoute()
 
+interface User {
+  id: string
+  name: string
+  email: string
+}
+
+const getUserFromLocalStorage = (): User | null => {
+  if (process.client) {
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      try {
+        return JSON.parse(userData)
+      } catch (error) {
+        console.error('Ошибка при парсинге данных пользователя:', error)
+        return null
+      }
+    }
+  }
+  return null
+}
+
+const userData = ref<User | null>(null)
+
 const userInitials = computed(() => {
-  return authStore.user?.name
-      ?.split(' ')
+  if (!userData.value?.name) return 'U'
+
+  return userData.value.name
+      .split(' ')
       .map(n => n[0])
       .join('')
-      .toUpperCase() || 'U'
+      .toUpperCase()
 })
 
-const userName = computed(() => authStore.user?.name || 'Пользователь')
-const userEmail = computed(() => authStore.user?.email || '')
+const userName = computed(() => userData.value?.name || 'Пользователь')
+const userEmail = computed(() => userData.value?.email || '')
 
 const handleLogout = () => {
-  authStore.logout()
+  if (process.client) {
+    localStorage.removeItem('user')
+    authStore.logout()
+  }
 }
 
 onMounted(() => {
   if (process.client) {
+    userData.value = getUserFromLocalStorage()
     authStore.initialize()
+  }
+})
+
+onMounted(() => {
+  if (process.client) {
+    const handleStorageChange = () => {
+      userData.value = getUserFromLocalStorage()
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('user-data-updated', handleStorageChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('user-data-updated', handleStorageChange)
+    }
   }
 })
 </script>
