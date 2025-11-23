@@ -1,9 +1,13 @@
 import { Product } from '../models/Order.js';
+import { Order } from '../models/Order.js';
 
 export const getProducts = async (req, res) => {
     try {
         const { type } = req.query;
-        let filter = { user: req.user.id };
+        const userOrders = await Order.find({ user: req.user.id });
+        const orderIds = userOrders.map(order => order._id);
+
+        let filter = { order: { $in: orderIds } };
 
         if (type && type !== 'all') {
             filter.type = type;
@@ -22,12 +26,9 @@ export const getProducts = async (req, res) => {
 
 export const getProductById = async (req, res) => {
     try {
-        const product = await Product.findOne({
-            _id: req.params.id,
-            user: req.user.id
-        }).populate('order', 'title');
+        const product = await Product.findById(req.params.id).populate('order', 'title user');
 
-        if (!product) {
+        if (!product || product.order.user.toString() !== req.user.id) {
             return res.status(404).json({ message: 'Product not found' });
         }
 
@@ -42,7 +43,6 @@ export const createProduct = async (req, res) => {
     try {
         const { orderId, ...productData } = req.body;
 
-        // Проверяем, что заказ принадлежит пользователю
         const order = await Order.findOne({
             _id: orderId,
             user: req.user.id
@@ -54,8 +54,7 @@ export const createProduct = async (req, res) => {
 
         const product = new Product({
             ...productData,
-            order: orderId,
-            user: req.user.id
+            order: orderId
         });
 
         await product.save();
@@ -70,19 +69,28 @@ export const createProduct = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
     try {
-        const product = await Product.findOne({
-            _id: req.params.id,
-            user: req.user.id
-        });
+        const product = await Product.findById(req.params.id).populate('order', 'user');
 
-        if (!product) {
+        if (!product || product.order.user.toString() !== req.user.id) {
             return res.status(404).json({ message: 'Product not found' });
         }
 
+        const updateData = { ...req.body };
+
+        if (req.body.guarantee) {
+            updateData.guarantee = {
+                ...product.guarantee.toObject(),
+                ...req.body.guarantee
+            };
+        }
+
+        delete updateData._id;
+        delete updateData.__v;
+
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id,
-            req.body,
-            { new: true }
+            updateData,
+            { new: true, runValidators: true }
         ).populate('order', 'title');
 
         res.json(updatedProduct);
@@ -94,12 +102,9 @@ export const updateProduct = async (req, res) => {
 
 export const deleteProduct = async (req, res) => {
     try {
-        const product = await Product.findOne({
-            _id: req.params.id,
-            user: req.user.id
-        });
+        const product = await Product.findById(req.params.id).populate('order', 'user');
 
-        if (!product) {
+        if (!product || product.order.user.toString() !== req.user.id) {
             return res.status(404).json({ message: 'Product not found' });
         }
 

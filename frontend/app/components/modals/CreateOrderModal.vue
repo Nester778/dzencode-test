@@ -87,7 +87,6 @@ const formData = ref<OrderFormData>({
   date: new Date().toISOString().slice(0, 16)
 })
 
-// Сбрасываем форму при открытии модального окна
 watch(() => props.show, (newVal) => {
   if (newVal) {
     formData.value = {

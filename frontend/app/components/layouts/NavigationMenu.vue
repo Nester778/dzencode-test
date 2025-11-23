@@ -41,7 +41,6 @@
             Выйти
           </button>
         </div>
-        {{console.log(user)}}
       </div>
     </nav>
   </aside>
@@ -53,71 +52,24 @@ import { useAuthStore } from '~/composables/useStore'
 const authStore = useAuthStore()
 const route = useRoute()
 
-const user = computed(() => authStore.user)
-
-interface User {
-  id: string
-  name: string
-  email: string
-}
-
-const getUserFromLocalStorage = (): User | null => {
-  if (process.client) {
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      try {
-        return JSON.parse(userData)
-      } catch (error) {
-        console.error('Ошибка при парсинге данных пользователя:', error)
-        return null
-      }
-    }
-  }
-  return null
-}
-
-const userData = ref<User | null>(null)
-
 const userInitials = computed(() => {
-  if (!userData.value?.name) return 'U'
-
-  return userData.value.name
-      .split(' ')
+  return authStore.user?.value?.name
+      ?.split(' ')
       .map(n => n[0])
       .join('')
-      .toUpperCase()
+      .toUpperCase() || 'U'
 })
 
-const userName = computed(() => userData.value?.name || 'Пользователь')
-const userEmail = computed(() => userData.value?.email || '')
+const userName = computed(() => authStore.user?.value?.name || 'Пользователь')
+const userEmail = computed(() => authStore.user?.value?.email || '')
 
 const handleLogout = () => {
-  if (process.client) {
-    localStorage.removeItem('user')
-    authStore.logout()
-  }
+  authStore.logout()
 }
 
 onMounted(() => {
   if (process.client) {
-    userData.value = getUserFromLocalStorage()
     authStore.initialize()
-  }
-})
-
-onMounted(() => {
-  if (process.client) {
-    const handleStorageChange = () => {
-      userData.value = getUserFromLocalStorage()
-    }
-
-    window.addEventListener('storage', handleStorageChange)
-    window.addEventListener('user-data-updated', handleStorageChange)
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('user-data-updated', handleStorageChange)
-    }
   }
 })
 </script>

@@ -2,7 +2,7 @@ export const seedInitialData = async (userId) => {
     try {
         // Удаляем старые данные пользователя перед созданием новых
         await Order.deleteMany({ user: userId });
-        await Product.deleteMany({ user: userId });
+        await Product.deleteMany({ order: { $in: (await Order.find({ user: userId })).map(o => o._id) } });
 
         // Create sample orders
         const order1 = new Order({
@@ -48,7 +48,6 @@ export const seedInitialData = async (userId) => {
                     { value: 2600, symbol: 'UAH', isDefault: true }
                 ],
                 order: savedOrder1._id,
-                user: userId,
                 date: new Date('2017-06-29 12:09:33')
             },
             {
@@ -67,7 +66,6 @@ export const seedInitialData = async (userId) => {
                     { value: 13500, symbol: 'UAH', isDefault: true }
                 ],
                 order: savedOrder2._id,
-                user: userId,
                 date: new Date('2018-07-15 14:30:00')
             },
             {
@@ -86,7 +84,6 @@ export const seedInitialData = async (userId) => {
                     { value: 8100, symbol: 'UAH', isDefault: true }
                 ],
                 order: savedOrder3._id,
-                user: userId,
                 date: new Date('2019-08-20 09:15:00')
             },
             {
@@ -105,7 +102,6 @@ export const seedInitialData = async (userId) => {
                     { value: 5400, symbol: 'UAH', isDefault: true }
                 ],
                 order: savedOrder1._id,
-                user: userId,
                 date: new Date('2020-01-10 10:00:00')
             }
         ];

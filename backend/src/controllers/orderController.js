@@ -2,7 +2,6 @@ import { Order, Product } from '../models/Order.js';
 
 export const getOrders = async (req, res) => {
     try {
-        // Получаем заказы только текущего пользователя
         const orders = await Order.find({ user: req.user.id })
             .populate('products')
             .sort({ date: -1 });
@@ -39,7 +38,7 @@ export const createOrder = async (req, res) => {
             title,
             description,
             date: date || new Date(),
-            user: req.user.id // Привязываем к текущему пользователю
+            user: req.user.id
         });
 
         await order.save();

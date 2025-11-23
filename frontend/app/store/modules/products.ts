@@ -1,3 +1,4 @@
+// store/products.ts
 import type { Product } from '~/types'
 
 interface ProductsState {
@@ -27,14 +28,19 @@ export const products = {
         error: (state: ProductsState) => state.error,
         productTypes: (state: ProductsState) => {
             const types = new Set(state.products.map(p => p.type))
-            return ['all', ...Array.from(types)]
+            return Array.from(types)
         }
     },
 
     mutations: {
         SET_PRODUCTS(state: ProductsState, products: Product[]) {
             state.products = products
-            state.filteredProducts = products
+            console.log(state.products)
+            if (state.selectedType === 'all') {
+                state.filteredProducts = products
+            } else {
+                state.filteredProducts = products.filter(p => p.type === state.selectedType)
+            }
         },
 
         FILTER_PRODUCTS_BY_TYPE(state: ProductsState, type: string) {
@@ -56,6 +62,7 @@ export const products = {
 
         ADD_PRODUCT(state: ProductsState, product: Product) {
             state.products.unshift(product)
+            // Автоматически применяем фильтр к новому продукту
             if (state.selectedType === 'all' || product.type === state.selectedType) {
                 state.filteredProducts.unshift(product)
             }
@@ -66,9 +73,18 @@ export const products = {
             if (index !== -1) {
                 state.products.splice(index, 1, updatedProduct)
 
+                // Обновляем в filteredProducts с учетом фильтра
                 const filteredIndex = state.filteredProducts.findIndex(p => p._id === updatedProduct._id)
                 if (filteredIndex !== -1) {
-                    state.filteredProducts.splice(filteredIndex, 1, updatedProduct)
+                    if (state.selectedType === 'all' || updatedProduct.type === state.selectedType) {
+                        state.filteredProducts.splice(filteredIndex, 1, updatedProduct)
+                    } else {
+                        // Если продукт больше не соответствует фильтру - удаляем из filteredProducts
+                        state.filteredProducts.splice(filteredIndex, 1)
+                    }
+                } else if (state.selectedType === 'all' || updatedProduct.type === state.selectedType) {
+                    // Если продукт теперь соответствует фильтру - добавляем
+                    state.filteredProducts.unshift(updatedProduct)
                 }
             }
         },
@@ -80,7 +96,7 @@ export const products = {
     },
 
     actions: {
-        async fetchProducts({ commit }: any, type?: string) {
+        async fetchProducts({ commit, state }: any, type?: string) {
             commit('SET_LOADING', true)
             commit('SET_ERROR', null)
 
@@ -88,7 +104,16 @@ export const products = {
                 const { $api } = useNuxtApp()
                 const params = type && type !== 'all' ? { type } : {}
                 const products = await $api.get<Product[]>('/products', { params })
+
+                console.log('Fetched products:', products)
+
                 commit('SET_PRODUCTS', products)
+
+                // Если передан тип - применяем фильтр
+                if (type && type !== state.selectedType) {
+                    commit('FILTER_PRODUCTS_BY_TYPE', type)
+                }
+
                 return products
             } catch (error: any) {
                 const message = error.response?.data?.message || 'Ошибка при загрузке продуктов'
@@ -137,6 +162,21 @@ export const products = {
                 commit('REMOVE_PRODUCT', productId)
             } catch (error: any) {
                 const message = error.response?.data?.message || 'Ошибка при удалении продукта'
+                commit('SET_ERROR', message)
+                throw error
+            }
+        },
+
+        async updateProduct({ commit }: any, productData: any) {
+            commit('SET_ERROR', null)
+
+            try {
+                const { $api } = useNuxtApp()
+                const updatedProduct = await $api.put<Product>(`/products/${productData._id}`, productData)
+                commit('UPDATE_PRODUCT', updatedProduct)
+                return updatedProduct
+            } catch (error: any) {
+                const message = error.response?.data?.message || 'Ошибка при обновлении продукта'
                 commit('SET_ERROR', message)
                 throw error
             }

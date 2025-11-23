@@ -200,6 +200,13 @@ export const useProductsStore = () => {
             }
             return store.dispatch('products/deleteProduct', id)
         },
+        updateProduct: (productData: any) => {
+            if (!store) {
+                console.warn('Store not available')
+                return Promise.resolve(null)
+            }
+            return store.dispatch('products/updateProduct', productData)
+        },
         filterByType: (type: string) => {
             if (!store) {
                 console.warn('Store not available')
