@@ -3,25 +3,17 @@ import { Product } from '../models/Order.js';
 export const getProducts = async (req, res) => {
     try {
         const { type } = req.query;
-        let filter = {};
+        let filter = { user: req.user.id };
 
         if (type && type !== 'all') {
             filter.type = type;
         }
 
-        // Получаем продукты только из заказов текущего пользователя
         const products = await Product.find(filter)
-            .populate({
-                path: 'order',
-                select: 'title',
-                match: { user: req.user.id } // Фильтруем по пользователю
-            })
+            .populate('order', 'title')
             .sort({ date: -1 });
 
-        // Фильтруем продукты, у которых order не null (принадлежат пользователю)
-        const userProducts = products.filter(product => product.order !== null);
-
-        res.json(userProducts);
+        res.json(products);
     } catch (error) {
         console.error('Get products error:', error);
         res.status(500).json({ message: 'Server error' });
@@ -30,14 +22,12 @@ export const getProducts = async (req, res) => {
 
 export const getProductById = async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id)
-            .populate({
-                path: 'order',
-                select: 'title',
-                match: { user: req.user.id }
-            });
+        const product = await Product.findOne({
+            _id: req.params.id,
+            user: req.user.id
+        }).populate('order', 'title');
 
-        if (!product || !product.order) {
+        if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
 
@@ -64,7 +54,8 @@ export const createProduct = async (req, res) => {
 
         const product = new Product({
             ...productData,
-            order: orderId
+            order: orderId,
+            user: req.user.id
         });
 
         await product.save();
@@ -79,14 +70,12 @@ export const createProduct = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id)
-            .populate({
-                path: 'order',
-                select: 'user',
-                match: { user: req.user.id }
-            });
+        const product = await Product.findOne({
+            _id: req.params.id,
+            user: req.user.id
+        });
 
-        if (!product || !product.order) {
+        if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
 
@@ -105,14 +94,12 @@ export const updateProduct = async (req, res) => {
 
 export const deleteProduct = async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id)
-            .populate({
-                path: 'order',
-                select: 'user',
-                match: { user: req.user.id }
-            });
+        const product = await Product.findOne({
+            _id: req.params.id,
+            user: req.user.id
+        });
 
-        if (!product || !product.order) {
+        if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
 

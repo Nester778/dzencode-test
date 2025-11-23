@@ -46,6 +46,9 @@ export const orders = {
             const index = state.orders.findIndex(o => o._id === updatedOrder._id)
             if (index !== -1) {
                 state.orders.splice(index, 1, updatedOrder)
+                if (state.selectedOrder?._id === updatedOrder._id) {
+                    state.selectedOrder = updatedOrder
+                }
             }
         },
 
@@ -124,6 +127,84 @@ export const orders = {
                 commit('REMOVE_ORDER', orderId)
             } catch (error: any) {
                 const message = error.response?.data?.message || 'Ошибка при удалении заказа'
+                commit('SET_ERROR', message)
+                throw error
+            }
+        },
+
+        async updateOrder({ commit }: any, orderData: { _id: string; title: string; description: string; date: string }) {
+            commit('SET_ERROR', null)
+
+            try {
+                const { $api } = useNuxtApp()
+                const updatedOrder = await $api.put<Order>(`/orders/${orderData._id}`, orderData)
+                commit('UPDATE_ORDER', updatedOrder)
+                return updatedOrder
+            } catch (error: any) {
+                const message = error.response?.data?.message || 'Ошибка при обновлении заказа'
+                commit('SET_ERROR', message)
+                throw error
+            }
+        },
+
+        async addProductsToOrder({ commit, state }: any, { orderId, products }: { orderId: string; products: any[] }) {
+            commit('SET_ERROR', null)
+
+            try {
+                const { $api } = useNuxtApp()
+
+                const addedProducts = []
+                for (const product of products) {
+                    const productData = {
+                        ...product,
+                        order: orderId
+                    }
+                    const addedProduct = await $api.post('/products', productData)
+                    addedProducts.push(addedProduct)
+                }
+
+                const order = state.orders.find((o: Order) => o._id === orderId)
+                if (order) {
+                    const updatedOrder = {
+                        ...order,
+                        products: [...(order.products || []), ...addedProducts]
+                    }
+                    commit('UPDATE_ORDER', updatedOrder)
+
+                    if (state.selectedOrder?._id === orderId) {
+                        commit('SET_SELECTED_ORDER', updatedOrder)
+                    }
+                }
+
+                return addedProducts
+            } catch (error: any) {
+                const message = error.response?.data?.message || 'Ошибка при добавлении продуктов в заказ'
+                commit('SET_ERROR', message)
+                throw error
+            }
+        },
+
+        async removeProductFromOrder({ commit, state }: any, { orderId, productId }: { orderId: string; productId: string }) {
+            commit('SET_ERROR', null)
+
+            try {
+                const { $api } = useNuxtApp()
+                await $api.delete(`/products/${productId}`)
+
+                const order = state.orders.find((o: Order) => o._id === orderId)
+                if (order) {
+                    const updatedOrder = {
+                        ...order,
+                        products: (order.products || []).filter((p: any) => p._id !== productId)
+                    }
+                    commit('UPDATE_ORDER', updatedOrder)
+
+                    if (state.selectedOrder?._id === orderId) {
+                        commit('SET_SELECTED_ORDER', updatedOrder)
+                    }
+                }
+            } catch (error: any) {
+                const message = error.response?.data?.message || 'Ошибка при удалении продукта из заказа'
                 commit('SET_ERROR', message)
                 throw error
             }

@@ -41,6 +41,7 @@
             Выйти
           </button>
         </div>
+        {{console.log(user)}}
       </div>
     </nav>
   </aside>
@@ -51,6 +52,8 @@ import { useAuthStore } from '~/composables/useStore'
 
 const authStore = useAuthStore()
 const route = useRoute()
+
+const user = computed(() => authStore.user)
 
 interface User {
   id: string

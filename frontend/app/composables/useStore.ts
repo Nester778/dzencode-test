@@ -1,5 +1,3 @@
-// composables/useStore.ts
-// Безопасное получение store
 export const useStore = () => {
     try {
         const nuxtApp = useNuxtApp()
@@ -13,7 +11,6 @@ export const useStore = () => {
 export const useOrdersStore = () => {
     const store = useStore()
 
-    // Создаем fallback значения для SSR
     const fallbackState = {
         orders: [],
         isLoading: false,
@@ -22,13 +19,11 @@ export const useOrdersStore = () => {
     }
 
     return {
-        // State с безопасным доступом
         orders: computed(() => store?.state?.orders?.orders || fallbackState.orders),
         isLoading: computed(() => store?.state?.orders?.isLoading || fallbackState.isLoading),
         error: computed(() => store?.state?.orders?.error || fallbackState.error),
         selectedOrder: computed(() => store?.state?.orders?.selectedOrder || fallbackState.selectedOrder),
 
-        // Actions с безопасным вызовом
         fetchOrders: () => {
             if (!store) {
                 console.warn('Store not available')
@@ -50,6 +45,8 @@ export const useOrdersStore = () => {
             }
             return store.dispatch('orders/createOrder', orderData)
         },
+        updateOrder: (orderData: { _id: string; title: string; description: string; date: string }) =>
+            store.dispatch('orders/updateOrder', orderData),
         deleteOrder: (id: string) => {
             if (!store) {
                 console.warn('Store not available')
@@ -77,11 +74,23 @@ export const useOrdersStore = () => {
                 return
             }
             store.dispatch('orders/clearError')
+        },
+        addProductsToOrder: (data: { orderId: string; products: any[] }) => {
+            if (!store) {
+                console.warn('Store not available')
+                return Promise.resolve([])
+            }
+            return store.dispatch('orders/addProductsToOrder', data)
+        },
+        removeProductFromOrder: (data: { orderId: string; productId: string }) => {
+            if (!store) {
+                console.warn('Store not available')
+                return Promise.resolve()
+            }
+            return store.dispatch('orders/removeProductFromOrder', data)
         }
     }
 }
-
-// Аналогично исправьте другие stores
 export const useAuthStore = () => {
     const store = useStore()
 

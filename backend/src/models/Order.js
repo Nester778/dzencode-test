@@ -38,33 +38,52 @@ const productSchema = new mongoose.Schema({
     },
     photo: {
         type: String,
-        default: ''
+        default: 'pathToFile.jpg'
     },
     title: {
         type: String,
-        required: true,
-        trim: true,
-        maxlength: [100, 'Title cannot be more than 100 characters']
+        required: true
     },
     type: {
         type: String,
-        required: true,
-        enum: ['Monitors', 'Phones', 'Tablets', 'Laptops'],
-        default: 'Monitors'
+        required: true
     },
     specification: {
         type: String,
-        default: '',
-        maxlength: [500, 'Specification cannot be more than 500 characters']
-    },
-    guarantee: {
-        type: guaranteeSchema,
         required: true
     },
-    price: [priceSchema],
+    guarantee: {
+        start: {
+            type: Date,
+            required: true
+        },
+        end: {
+            type: Date,
+            required: true
+        }
+    },
+    price: [{
+        value: {
+            type: Number,
+            required: true
+        },
+        symbol: {
+            type: String,
+            required: true
+        },
+        isDefault: {
+            type: Boolean,
+            default: false
+        }
+    }],
     order: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Order',
+        required: true
+    },
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
         required: true
     },
     date: {
