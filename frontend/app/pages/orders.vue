@@ -1,22 +1,39 @@
 <template>
   <div class="orders-page">
     <div class="page-header d-flex justify-content-between align-items-center mb-4">
-      <h1 class="page-title">Приходы / {{ orders.length }}</h1>
-      <button class="btn btn-success">
+      <h1 class="page-title">Приходы / {{ orders.value.length }}</h1>
+      <button class="btn btn-success" @click="openCreateModal">
         <Plus :size="16" class="me-2" />
         Новый приход
       </button>
     </div>
 
-    <div class="orders-container">
+    <div v-if="isLoading.value" class="text-center py-5">
+      <div class="spinner-border text-success" role="status">
+        <span class="visually-hidden">Загрузка...</span>
+      </div>
+      <p class="mt-3 text-muted">Загрузка заказов...</p>
+    </div>
+
+    <div v-else class="orders-container">
       <div class="row g-3">
         <div class="col-12" :class="{ 'col-lg-5': selectedOrder }">
           <div class="orders-list">
+            <div v-if="orders.value.length === 0" class="empty-state text-center py-5">
+              <Package :size="64" class="text-muted mb-3" />
+              <h5>Заказов пока нет</h5>
+              <p class="text-muted">Создайте первый заказ чтобы начать работу</p>
+              <button class="btn btn-success mt-2" @click="openCreateModal">
+                <Plus :size="16" class="me-2" />
+                Создать заказ
+              </button>
+            </div>
+
             <div
-                v-for="order in orders"
-                :key="order.id"
+                v-for="order in orders.value"
+                :key="order._id"
                 class="order-item card"
-                :class="{ 'selected': selectedOrder?.id === order.id }"
+                :class="{ 'selected': selectedOrder?._id === order._id }"
                 @click="selectOrder(order)"
             >
               <div class="card-body p-3">
@@ -26,6 +43,7 @@
                     <button
                         class="btn btn-link text-danger p-0"
                         @click.stop="openDeleteModal(order)"
+                        :disabled="isLoading.value"
                     >
                       <Trash2 :size="14" />
                     </button>
@@ -53,6 +71,7 @@
             </div>
           </div>
         </div>
+
         <div v-if="selectedOrder" class="col-12 col-lg-7">
           <div class="order-details-panel card h-100">
             <div class="card-header bg-white border-bottom">
@@ -61,6 +80,7 @@
                 <button
                     class="btn btn-link text-muted p-0"
                     @click="selectedOrder = null"
+                    :disabled="isLoading.value"
                 >
                   <X :size="20" />
                 </button>
@@ -70,10 +90,24 @@
             <div class="card-body">
               <div class="products-section">
                 <h6 class="section-title mb-3">Продукты в заказе</h6>
-                <div class="products-list">
+
+                <div v-if="isLoadingProducts" class="text-center py-3">
+                  <div class="spinner-border spinner-border-sm text-success" role="status">
+                    <span class="visually-hidden">Загрузка...</span>
+                  </div>
+                  <p class="mt-2 text-muted small">Загрузка продуктов...</p>
+                </div>
+
+                <div v-else-if="!selectedOrder.products || selectedOrder.products.length === 0"
+                     class="empty-products text-center py-4">
+                  <Package :size="48" class="text-muted mb-2" />
+                  <p class="text-muted">В этом заказе пока нет продуктов</p>
+                </div>
+
+                <div v-else class="products-list">
                   <div
                       v-for="product in selectedOrder.products"
-                      :key="product.id"
+                      :key="product._id"
                       class="product-item card mb-2"
                   >
                     <div class="card-body p-3">
@@ -82,7 +116,7 @@
                           <div class="d-flex align-items-center">
                             <div class="product-photo me-3">
                               <img
-                                  v-if="product.photo"
+                                  v-if="product.photo && product.photo !== 'pathToFile.jpg'"
                                   :src="product.photo"
                                   :alt="product.title"
                                   class="img-thumbnail"
@@ -126,6 +160,7 @@
                   </div>
                 </div>
               </div>
+
               <div class="order-summary mt-4 pt-3 border-top">
                 <div class="row">
                   <div class="col-6">
@@ -141,6 +176,14 @@
             </div>
           </div>
         </div>
+
+        <div v-else-if="orders.value.length > 0" class="col-12">
+          <div class="empty-state text-center py-5">
+            <Package :size="64" class="text-muted mb-3" />
+            <h5>Выберите приход</h5>
+            <p class="text-muted">Выберите приход из списка чтобы посмотреть детали продуктов</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -154,170 +197,144 @@
           <p class="text-muted small">Это действие нельзя отменить.</p>
         </div>
         <div class="card-footer d-flex gap-2 justify-content-end">
-          <button class="btn btn-secondary" @click="closeDeleteModal">Отмена</button>
-          <button class="btn btn-danger" @click="confirmDelete">Удалить</button>
+          <button
+              class="btn btn-secondary"
+              @click="closeDeleteModal"
+              :disabled="isLoading.value"
+          >
+            Отмена
+          </button>
+          <button
+              class="btn btn-danger"
+              @click="confirmDelete"
+              :disabled="isLoading.value"
+          >
+            <span v-if="isLoading.value" class="spinner-border spinner-border-sm me-2"></span>
+            Удалить
+          </button>
         </div>
       </div>
     </div>
+
+    <div v-if="showCreateModal" class="modal-overlay" @click.self="closeCreateModal">
+      <div class="modal-content card animate__animated animate__zoomIn" style="max-width: 500px;">
+        <div class="card-header">
+          <h5 class="mb-0">Создать новый приход</h5>
+        </div>
+        <div class="card-body">
+          <form @submit.prevent="createOrder">
+            <div class="mb-3">
+              <label for="orderTitle" class="form-label">Название прихода</label>
+              <input
+                  v-model="newOrder.title"
+                  type="text"
+                  class="form-control"
+                  id="orderTitle"
+                  placeholder="Введите название прихода"
+                  required
+              >
+            </div>
+            <div class="mb-3">
+              <label for="orderDescription" class="form-label">Описание</label>
+              <textarea
+                  v-model="newOrder.description"
+                  class="form-control"
+                  id="orderDescription"
+                  rows="3"
+                  placeholder="Введите описание прихода"
+              ></textarea>
+            </div>
+            <div class="mb-3">
+              <label for="orderDate" class="form-label">Дата прихода</label>
+              <input
+                  v-model="newOrder.date"
+                  type="datetime-local"
+                  class="form-control"
+                  id="orderDate"
+                  required
+              >
+            </div>
+          </form>
+        </div>
+        <div class="card-footer d-flex gap-2 justify-content-end">
+          <button
+              class="btn btn-secondary"
+              @click="closeCreateModal"
+              :disabled="isLoading.value"
+          >
+            Отмена
+          </button>
+          <button
+              class="btn btn-success"
+              @click="createOrder"
+              :disabled="isLoading.value || !newOrder.title"
+          >
+            <span v-if="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+            Создать
+          </button>
+        </div>
+      </div>
+    </div>
+    {{console.log(orders)}}
   </div>
 </template>
 
 <script setup lang="ts">
 import { Plus, Trash2, X, Package, Edit } from 'lucide-vue-next'
+import { useOrdersStore } from '~/composables/useStore'
 
-interface Price {
-  value: number
-  symbol: string
-  isDefault: boolean
-}
+const ordersStore = useOrdersStore()
 
-interface Guarantee {
-  start: string
-  end: string
-}
+const orders = computed(() => ordersStore.orders)
+const isLoading = computed(() => ordersStore.isLoading)
+const error = computed(() => ordersStore.error)
 
-interface Product {
-  id: number
-  serialNumber: number
-  isNew: number
-  photo: string
-  title: string
-  type: string
-  specification: string
-  guarantee: Guarantee
-  price: Price[]
-  order: number
-  date: string
-}
-
-interface Order {
-  id: number
-  title: string
-  date: string
-  description: string
-  products: Product[]
-}
-
-const orders = ref<Order[]>([])
-const selectedOrder = ref<Order | null>(null)
+const selectedOrder = ref<any>(null)
 const showDeleteModal = ref(false)
-const orderToDelete = ref<Order | null>(null)
+const showCreateModal = ref(false)
+const orderToDelete = ref<any>(null)
+const isLoadingProducts = ref(false)
 
-onMounted(() => {
-  loadSampleData()
+const newOrder = ref({
+  title: '',
+  description: '',
+  date: new Date().toISOString().slice(0, 16)
 })
 
-const loadSampleData = () => {
-  const sampleProducts: Product[] = [
-    {
-      id: 1,
-      serialNumber: 1234,
-      isNew: 1,
-      photo: 'pathToFile.jpg',
-      title: 'Product 1',
-      type: 'Monitors',
-      specification: 'Specification 1',
-      guarantee: {
-        start: '2017-06-29 12:09:33',
-        end: '2018-06-29 12:09:33'
-      },
-      price: [
-        { value: 100, symbol: 'USD', isDefault: false },
-        { value: 2600, symbol: 'UAH', isDefault: true }
-      ],
-      order: 1,
-      date: '2017-06-29 12:09:33'
-    },
-    {
-      id: 2,
-      serialNumber: 5678,
-      isNew: 1,
-      photo: 'pathToFile.jpg',
-      title: 'Product 2',
-      type: 'Phones',
-      specification: 'Specification 2',
-      guarantee: {
-        start: '2017-06-29 12:09:33',
-        end: '2018-06-29 12:09:33'
-      },
-      price: [
-        { value: 200, symbol: 'USD', isDefault: false },
-        { value: 5200, symbol: 'UAH', isDefault: true }
-      ],
-      order: 2,
-      date: '2017-06-29 12:09:33'
-    }
-  ]
+onMounted(async () => {
+  console.log('Компонент mounted, загружаем заказы...')
+  await fetchOrders()
+})
 
-  orders.value = [
-    {
-      id: 1,
-      title: 'Длинное прердинное длинночее название прихода',
-      date: '2017-04-06T17:20:00',
-      description: 'Описание прихода 1',
-      products: Array(23).fill(null).map((_, i) => ({
-        ...sampleProducts[0],
-        id: i + 1,
-        title: `Product ${i + 1}`,
-        price: [
-          { value: 100 + i * 10, symbol: 'USD', isDefault: false },
-          { value: 2600 + i * 100, symbol: 'UAH', isDefault: true }
-        ]
-      }))
-    },
-    {
-      id: 2,
-      title: 'Длинное название прихода',
-      date: '2017-09-06T17:20:00',
-      description: 'Описание прихода 2',
-      products: Array(23).fill(null).map((_, i) => ({
-        ...sampleProducts[1],
-        id: i + 24,
-        title: `Product ${i + 24}`,
-        price: [
-          { value: 200 + i * 10, symbol: 'USD', isDefault: false },
-          { value: 5200 + i * 100, symbol: 'UAH', isDefault: true }
-        ]
-      }))
-    },
-    {
-      id: 3,
-      title: 'Длинное прердинное длинночее название прихода',
-      date: '2017-06-06T17:20:00',
-      description: 'Описание прихода 3',
-      products: Array(15).fill(null).map((_, i) => ({
-        ...sampleProducts[0],
-        id: i + 47,
-        title: `Product ${i + 47}`,
-        price: [
-          { value: 150 + i * 10, symbol: 'USD', isDefault: false },
-          { value: 3900 + i * 100, symbol: 'UAH', isDefault: true }
-        ]
-      }))
-    },
-    {
-      id: 4,
-      title: 'Длинное прердинное название прихода',
-      date: '2017-02-06T17:20:00',
-      description: 'Описание прихода 4',
-      products: Array(8).fill(null).map((_, i) => ({
-        ...sampleProducts[1],
-        id: i + 62,
-        title: `Product ${i + 62}`,
-        price: [
-          { value: 180 + i * 10, symbol: 'USD', isDefault: false },
-          { value: 4680 + i * 100, symbol: 'UAH', isDefault: true }
-        ]
-      }))
-    }
-  ]
+const fetchOrders = async () => {
+  try {
+    console.log('Начинаем загрузку заказов...')
+    await ordersStore.fetchOrders()
+    console.log('Заказы загружены, количество:', orders.value.length)
+  } catch (err) {
+    console.error('Ошибка при загрузке заказов:', err)
+  }
 }
 
-const selectOrder = (order: Order) => {
+const selectOrder = async (order: any) => {
   selectedOrder.value = order
+  if (order.products && order.products.length === 0) {
+    await loadOrderProducts(order._id)
+  }
 }
 
-const openDeleteModal = (order: Order) => {
+const loadOrderProducts = async (orderId: string) => {
+  isLoadingProducts.value = true
+  try {
+    await new Promise(resolve => setTimeout(resolve, 500))
+  } catch (err) {
+    console.error('Ошибка при загрузке продуктов:', err)
+  } finally {
+    isLoadingProducts.value = false
+  }
+}
+
+const openDeleteModal = (order: any) => {
   orderToDelete.value = order
   showDeleteModal.value = true
 }
@@ -327,17 +344,54 @@ const closeDeleteModal = () => {
   orderToDelete.value = null
 }
 
-const confirmDelete = () => {
+const confirmDelete = async () => {
   if (!orderToDelete.value) return
 
-  orders.value = orders.value.filter(o => o.id !== orderToDelete.value!.id)
-  if (selectedOrder.value?.id === orderToDelete.value.id) {
-    selectedOrder.value = null
+  try {
+    await ordersStore.deleteOrder(orderToDelete.value._id)
+    closeDeleteModal()
+
+    if (selectedOrder.value?._id === orderToDelete.value._id) {
+      selectedOrder.value = null
+    }
+  } catch (err) {
+    console.error('Ошибка при удалении заказа:', err)
   }
-  closeDeleteModal()
 }
 
-const getProductsCount = (order: Order) => {
+const openCreateModal = () => {
+  showCreateModal.value = true
+  newOrder.value = {
+    title: '',
+    description: '',
+    date: new Date().toISOString().slice(0, 16)
+  }
+}
+
+const closeCreateModal = () => {
+  showCreateModal.value = false
+}
+
+const createOrder = async () => {
+  if (!newOrder.value.title.trim()) return
+
+  try {
+    const orderData = {
+      title: newOrder.value.title,
+      description: newOrder.value.description,
+      date: newOrder.value.date
+    }
+
+    await ordersStore.createOrder(orderData)
+    closeCreateModal()
+
+    console.log('Заказ успешно создан!')
+  } catch (err) {
+    console.error('Ошибка при создании заказа:', err)
+  }
+}
+
+const getProductsCount = (order: any) => {
   return order.products?.length || 0
 }
 
@@ -358,21 +412,25 @@ const formatDate = (dateString: string) => {
   })
 }
 
-const calculateTotal = (order: Order) => {
-  if (!order.products) return '0 ₴'
+const calculateTotal = (order: any) => {
+  if (!order.products || order.products.length === 0) return '0 ₴ 0 $'
 
-  const total = order.products.reduce((sum, product) => {
-    const uahPrice = product.price.find(p => p.symbol === 'UAH')
+  const totalUAH = order.products.reduce((sum: number, product: any) => {
+    const uahPrice = product.price.find((p: any) => p.symbol === 'UAH')
     return sum + (uahPrice?.value || 0)
   }, 0)
 
-  const usdTotal = order.products.reduce((sum, product) => {
-    const usdPrice = product.price.find(p => p.symbol === 'USD')
+  const totalUSD = order.products.reduce((sum: number, product: any) => {
+    const usdPrice = product.price.find((p: any) => p.symbol === 'USD')
     return sum + (usdPrice?.value || 0)
   }, 0)
 
-  return `${total.toLocaleString('ru-RU')} ₴ ${usdTotal.toLocaleString('ru-RU')} $`
+  return `${totalUAH.toLocaleString('ru-RU')} ₴ ${totalUSD.toLocaleString('ru-RU')} $`
 }
+
+onUnmounted(() => {
+  ordersStore.clearError()
+})
 </script>
 
 <style scoped>
@@ -515,9 +573,8 @@ const calculateTotal = (order: Order) => {
   color: #28a745;
 }
 
-.empty-state {
+.empty-state, .empty-products {
   color: #6c757d;
-  margin-top: 2rem;
 }
 
 .modal-overlay {
@@ -553,5 +610,14 @@ const calculateTotal = (order: Order) => {
 
 .orders-list, .order-details-panel {
   transition: all 0.3s ease;
+}
+
+.spinner-border {
+  width: 1rem;
+  height: 1rem;
+}
+
+.empty-products {
+  padding: 2rem;
 }
 </style>

@@ -18,6 +18,10 @@
                 <p class="text-muted small">Введите ваши учетные данные</p>
               </div>
 
+              <div v-if="error" class="alert alert-danger small mb-3">
+                {{ error }}
+              </div>
+
               <form @submit.prevent="handleLogin">
                 <div class="mb-3">
                   <label for="email" class="form-label small text-muted fw-semibold">Email</label>
@@ -56,10 +60,7 @@
                 <button
                     type="submit"
                     class="btn btn-success w-100 py-2 fw-semibold"
-                    :disabled="loading"
                 >
-                  <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                  <span v-else><LogIn :size="16" class="me-2" /></span>
                   Войти в систему
                 </button>
               </form>
@@ -91,41 +92,33 @@
 
 <script setup lang="ts">
 import { Package, Mail, Lock, LogIn } from 'lucide-vue-next'
+import { useAuthStore } from '~/composables/useStore'
 
 definePageMeta({
   layout: 'auth'
 })
 
-const router = useRouter()
+const authStore = useAuthStore()
 
 const form = ref({
-  email: 'test@example.com',
-  password: 'password123'
+  email: '',
+  password: ''
 })
 
-const loading = ref(false)
+const isLoading = computed(() => authStore.isLoading)
+const error = computed(() => authStore.error)
 
 const handleLogin = async () => {
-  loading.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
-    localStorage.setItem('auth_token', 'fake-jwt-token')
-    localStorage.setItem('user', JSON.stringify({
-      id: '1',
-      name: 'Test User',
-      email: form.value.email
-    }))
-
-    console.log('Login successful!')
-
-    router.push('/orders')
+    await authStore.login(form.value)
   } catch (error) {
-    console.error('Login error:', error)
-  } finally {
-    loading.value = false
+    console.error('Login failed:', error)
   }
 }
+
+onUnmounted(() => {
+  authStore.clearError()
+})
 </script>
 
 <style scoped>

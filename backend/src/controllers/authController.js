@@ -7,6 +7,7 @@ const generateToken = (userId) => {
 
 export const register = async (req, res) => {
     try {
+        console.log("register")
         const { name, email, password } = req.body;
 
         // Check if user exists

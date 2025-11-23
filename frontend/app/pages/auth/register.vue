@@ -132,13 +132,15 @@
 
 <script setup lang="ts">
 import { Package, Mail, Lock, User, UserPlus, LogIn } from 'lucide-vue-next'
+import { useAuthStore } from '~/composables/useStore'
 
 definePageMeta({
   layout: 'auth'
 })
 
-const router = useRouter()
+const authStore = useAuthStore()
 
+// УБИРАЕМ значения по умолчанию
 const form = ref({
   name: '',
   email: '',
@@ -146,35 +148,29 @@ const form = ref({
   confirmPassword: ''
 })
 
-const loading = ref(false)
+const isLoading = computed(() => authStore.isLoading)
+const error = computed(() => authStore.error)
 
 const handleRegister = async () => {
   if (form.value.password !== form.value.confirmPassword) {
+    authStore.SET_ERROR('Пароли не совпадают')
     return
   }
 
-  loading.value = true
   try {
-    console.log('Registration attempt:', form.value)
-
-    await new Promise(resolve => setTimeout(resolve, 2000))
-
-    localStorage.setItem('auth_token', 'fake-jwt-token')
-    localStorage.setItem('user', JSON.stringify({
-      id: '2',
+    await authStore.register({
       name: form.value.name,
-      email: form.value.email
-    }))
-
-    console.log('Registration successful!')
-
-    router.push('/orders')
+      email: form.value.email,
+      password: form.value.password
+    })
   } catch (error) {
-    console.error('Registration error:', error)
-  } finally {
-    loading.value = false
+    console.error('Registration failed:', error)
   }
 }
+
+onUnmounted(() => {
+  authStore.clearError()
+})
 </script>
 
 <style scoped>

@@ -1,11 +1,18 @@
+import { safeLocalStorage } from '~/utils/storage'
+
 export default defineNuxtRouteMiddleware((to, from) => {
-    const token = localStorage.getItem('auth_token')
+    // Проверяем что мы на клиенте
+    if (process.client) {
+        const token = safeLocalStorage.getItem('auth_token')
+        const isAuthPage = to.path === '/auth/login' || to.path === '/auth/register'
+        const isProtectedPage = !isAuthPage && to.path !== '/'
 
-    if (!token && to.path !== '/auth/login') {
-        return navigateTo('/auth/login')
-    }
+        if (!token && isProtectedPage) {
+            return navigateTo('/auth/login')
+        }
 
-    if (token && to.path === '/auth/login') {
-        return navigateTo('/orders')
+        if (token && isAuthPage) {
+            return navigateTo('/orders')
+        }
     }
 })
